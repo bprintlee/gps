@@ -142,6 +142,16 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 delay(stateCheckInterval) // 根据省电模式调整检查频率
             }
         }
+        
+        // 启动定时保存任务
+        serviceScope.launch {
+            while (isActive) {
+                delay(30000) // 每30秒保存一次
+                if (synchronized(allGpsData) { allGpsData.isNotEmpty() }) {
+                    saveGpsData()
+                }
+            }
+        }
     }
     
     private fun checkPowerSaveMode() {
@@ -216,6 +226,14 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 saveGpsData()
             }
         }
+        
+        // 确保至少每30秒保存一次数据
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastGpsTime > 30000) {
+            serviceScope.launch {
+                saveGpsData()
+            }
+        }
     }
     
     override fun onSensorChanged(event: SensorEvent?) {
@@ -235,25 +253,21 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     
     private suspend fun saveGpsData() {
-        val dataList = mutableListOf<GpsData>()
-        val saveThreshold = if (isPowerSaveMode) 5 else 3
-        repeat(saveThreshold) {
-            gpsDataQueue.poll()?.let { dataList.add(it) }
-        }
-        
-        if (dataList.isNotEmpty()) {
-            try {
-                // 获取累积的所有数据的副本
-                val allDataCopy = synchronized(allGpsData) {
-                    allGpsData.toList()
-                }
-                
+        try {
+            // 获取累积的所有数据的副本
+            val allDataCopy = synchronized(allGpsData) {
+                allGpsData.toList()
+            }
+            
+            if (allDataCopy.isNotEmpty()) {
                 // 在同步块外调用挂起函数
                 gpxExporter.appendGpsData(allDataCopy)
                 android.util.Log.d("GpsTrackingService", "成功保存 ${allDataCopy.size} 个GPS点到GPX文件")
-            } catch (e: Exception) {
-                android.util.Log.e("GpsTrackingService", "保存GPX数据失败", e)
+            } else {
+                android.util.Log.w("GpsTrackingService", "没有GPS数据需要保存")
             }
+        } catch (e: Exception) {
+            android.util.Log.e("GpsTrackingService", "保存GPX数据失败", e)
         }
     }
     
