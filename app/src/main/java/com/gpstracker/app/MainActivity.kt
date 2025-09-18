@@ -57,8 +57,29 @@ class MainActivity : AppCompatActivity() {
         }
         
         binding.exportButton.setOnClickListener {
-            val intent = Intent(this, ExportActivity::class.java)
-            startActivity(intent)
+            // 显示GPX文件保存路径
+            if (isTracking) {
+                val serviceIntent = Intent(this, GpsTrackingService::class.java)
+                try {
+                    val serviceConnection = object : android.content.ServiceConnection {
+                        override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
+                            service?.let {
+                                val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
+                                val gpxPath = gpsService.getGpxDirectoryPath()
+                                Toast.makeText(this@MainActivity, "GPX文件保存在: $gpxPath", Toast.LENGTH_LONG).show()
+                                unbindService(this)
+                            }
+                        }
+                        override fun onServiceDisconnected(name: android.content.ComponentName?) {}
+                    }
+                    bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+                } catch (e: Exception) {
+                    Toast.makeText(this, "无法获取GPX文件路径", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                val intent = Intent(this, ExportActivity::class.java)
+                startActivity(intent)
+            }
         }
         
         binding.powerSaveButton.setOnClickListener {

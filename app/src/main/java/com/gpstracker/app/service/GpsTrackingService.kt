@@ -237,7 +237,12 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         }
         
         if (dataList.isNotEmpty()) {
-            gpxExporter.appendGpsData(dataList)
+            try {
+                gpxExporter.appendGpsData(dataList)
+                android.util.Log.d("GpsTrackingService", "成功保存 ${dataList.size} 个GPS点到GPX文件")
+            } catch (e: Exception) {
+                android.util.Log.e("GpsTrackingService", "保存GPX数据失败", e)
+            }
         }
     }
     
@@ -326,6 +331,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     fun getLastAcceleration(): Float = lastAcceleration
     fun isPowerSaveMode(): Boolean = isPowerSaveMode
     fun getLastLocation(): Location? = lastLocation
+    fun getGpxDirectoryPath(): String = gpxExporter.getGpxDirectoryPath().absolutePath
     
     // 手动切换省电模式
     fun togglePowerSaveMode() {

@@ -2,6 +2,7 @@ package com.gpstracker.app.utils
 
 import android.content.Context
 import android.os.Environment
+import android.util.Log
 import com.gpstracker.app.model.GpsData
 import com.gpstracker.app.model.TrackingState
 import kotlinx.coroutines.Dispatchers
@@ -19,9 +20,11 @@ class GpxExporter(private val context: Context) {
     }
     
     private fun getGpxDirectory(): File {
-        val directory = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "gpx_tracks")
+        // 使用应用内部存储，确保有写入权限
+        val directory = File(context.filesDir, "gpx_tracks")
         if (!directory.exists()) {
-            directory.mkdirs()
+            val created = directory.mkdirs()
+            Log.d("GpxExporter", "创建GPX目录: $created, 路径: ${directory.absolutePath}")
         }
         return directory
     }
@@ -32,13 +35,20 @@ class GpxExporter(private val context: Context) {
     }
     
     suspend fun appendGpsData(dataList: List<GpsData>) = withContext(Dispatchers.IO) {
-        val gpxFile = File(getGpxDirectory(), getGpxFileName())
-        
-        if (!gpxFile.exists()) {
-            createNewGpxFile(gpxFile)
+        try {
+            val gpxFile = File(getGpxDirectory(), getGpxFileName())
+            Log.d("GpxExporter", "保存GPX数据到: ${gpxFile.absolutePath}")
+            
+            if (!gpxFile.exists()) {
+                createNewGpxFile(gpxFile)
+                Log.d("GpxExporter", "创建新的GPX文件")
+            }
+            
+            appendToGpxFile(gpxFile, dataList)
+            Log.d("GpxExporter", "成功保存 ${dataList.size} 个GPS点")
+        } catch (e: Exception) {
+            Log.e("GpxExporter", "保存GPX数据失败", e)
         }
-        
-        appendToGpxFile(gpxFile, dataList)
     }
     
     private fun createNewGpxFile(gpxFile: File) {

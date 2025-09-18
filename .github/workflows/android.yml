@@ -26,7 +26,7 @@ jobs:
       id: version
       run: |
         # 获取当前时间作为版本号
-        BUILD_TIME=$(date +"%Y%m%d%H%M")
+        BUILD_TIME=$(date +"%Y%m%d%H%M%S")
         BUILD_DATE=$(date +"%Y-%m-%d %H:%M:%S")
         
         # 获取Git信息
@@ -35,13 +35,9 @@ jobs:
         
         # 生成版本名称和代码
         VERSION_NAME="1.0.0-build.$BUILD_TIME"
-        # 使用时间戳的后8位作为版本代码，确保在Int32范围内
-        VERSION_CODE=$(echo $BUILD_TIME | tail -c 9 | sed 's/^0*//')
-        # 如果版本代码为空或为0，设置为1
-        if [ -z "$VERSION_CODE" ] || [ "$VERSION_CODE" -eq 0 ]; then
-            VERSION_CODE=1
-        fi
-        # 确保版本代码不超过Android限制 (2^31-1)
+        # 使用Unix时间戳作为版本代码，确保每次构建都不同
+        VERSION_CODE=$(date +%s)
+        # 确保版本代码不超过Android限制 (2^31-1 = 2147483647)
         if [ "$VERSION_CODE" -gt 2147483647 ]; then
             VERSION_CODE=$((VERSION_CODE % 1000000000))
         fi
@@ -75,6 +71,13 @@ jobs:
         # 验证文件内容
         echo "Build.gradle content around version lines:"
         grep -A 2 -B 2 -E "(versionName|versionCode)" app/build.gradle
+        
+        # 显示完整的版本信息用于调试
+        echo "=== 版本信息调试 ==="
+        echo "VERSION_NAME: ${{ steps.version.outputs.VERSION_NAME }}"
+        echo "VERSION_CODE: ${{ steps.version.outputs.VERSION_CODE }}"
+        echo "BUILD_DATE: ${{ steps.version.outputs.BUILD_DATE }}"
+        echo "GIT_COMMIT: ${{ steps.version.outputs.GIT_COMMIT }}"
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
