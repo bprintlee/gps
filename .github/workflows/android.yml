@@ -32,7 +32,16 @@ jobs:
         
         # 生成版本名称和代码
         VERSION_NAME="1.0.0-build.$BUILD_TIME"
-        VERSION_CODE=$BUILD_TIME
+        # 使用时间戳的后8位作为版本代码，确保在Int32范围内
+        VERSION_CODE=$(echo $BUILD_TIME | tail -c 9 | sed 's/^0*//')
+        # 如果版本代码为空或为0，设置为1
+        if [ -z "$VERSION_CODE" ] || [ "$VERSION_CODE" -eq 0 ]; then
+            VERSION_CODE=1
+        fi
+        # 确保版本代码不超过Android限制 (2^31-1)
+        if [ "$VERSION_CODE" -gt 2147483647 ]; then
+            VERSION_CODE=$((VERSION_CODE % 1000000000))
+        fi
         
         echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
         echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_OUTPUT
