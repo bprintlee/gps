@@ -35,8 +35,8 @@ jobs:
         
         # 生成版本名称和代码
         VERSION_NAME="1.0.0-build.$BUILD_TIME"
-        # 使用递增的版本代码，确保可以覆盖安装
-        VERSION_CODE=$(( $(date +%s) % 1000000 ))
+        # 使用固定版本代码，确保可以覆盖安装
+        VERSION_CODE=100
         
         echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
         echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_OUTPUT

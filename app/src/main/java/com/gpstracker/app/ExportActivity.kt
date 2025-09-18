@@ -1,5 +1,6 @@
 package com.gpstracker.app
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -8,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -25,6 +27,17 @@ class ExportActivity : AppCompatActivity() {
     private lateinit var gpxExporter: GpxExporter
     private lateinit var adapter: GpxFileAdapter
     private var gpxFiles = mutableListOf<File>()
+    
+    // 文件选择器
+    private val filePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                saveFileToSelectedLocation(uri)
+            }
+        }
+    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,16 +93,83 @@ class ExportActivity : AppCompatActivity() {
     
     private fun onFileClick(file: File) {
         // 显示文件操作选项
-        val options = arrayOf("导出文件", "删除文件", "取消")
+        val options = arrayOf("另存为...", "导出到下载目录", "分享文件", "删除文件", "取消")
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle(file.name)
             .setItems(options) { _, which ->
                 when (which) {
-                    0 -> exportSingleFile(file)
-                    1 -> deleteFile(file)
+                    0 -> saveAsFile(file)
+                    1 -> exportToDownloads(file)
+                    2 -> shareFile(file)
+                    3 -> deleteFile(file)
                 }
             }
             .show()
+    }
+    
+    private var selectedFile: File? = null
+    
+    private fun saveAsFile(file: File) {
+        selectedFile = file
+        // 使用系统文件选择器
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/gpx+xml"
+            putExtra(Intent.EXTRA_TITLE, file.name)
+        }
+        filePickerLauncher.launch(intent)
+    }
+    
+    private fun saveFileToSelectedLocation(uri: Uri) {
+        lifecycleScope.launch {
+            try {
+                contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    selectedFile?.let { sourceFile ->
+                        if (sourceFile.exists()) {
+                            sourceFile.inputStream().use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
+                            Toast.makeText(this@ExportActivity, "文件保存成功", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this@ExportActivity, "源文件不存在", Toast.LENGTH_SHORT).show()
+                        }
+                    } ?: run {
+                        Toast.makeText(this@ExportActivity, "未选择源文件", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@ExportActivity, "保存失败：${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    private fun exportToDownloads(file: File) {
+        lifecycleScope.launch {
+            try {
+                val result = gpxExporter.exportToExternalStorage(file.name)
+                if (result != null) {
+                    Toast.makeText(this@ExportActivity, "文件已导出到下载目录：$result", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this@ExportActivity, "导出失败", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@ExportActivity, "导出失败：${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    private fun shareFile(file: File) {
+        try {
+            val uri = Uri.fromFile(file)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/gpx+xml"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "GPS轨迹文件")
+            }
+            startActivity(Intent.createChooser(intent, "分享GPX文件"))
+        } catch (e: Exception) {
+            Toast.makeText(this@ExportActivity, "分享失败：${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
     
     private fun exportSingleFile(file: File) {

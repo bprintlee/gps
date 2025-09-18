@@ -206,4 +206,45 @@ class GpxExporter(private val context: Context) {
             }
         )
     }
+    
+    suspend fun saveAsGpxFile(sourceFile: File, targetPath: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val targetFile = File(targetPath)
+            // 确保目标目录存在
+            targetFile.parentFile?.mkdirs()
+            
+            // 复制文件
+            sourceFile.copyTo(targetFile, overwrite = true)
+            Log.d("GpxExporter", "文件另存为成功: ${targetFile.absolutePath}")
+            true
+        } catch (e: Exception) {
+            Log.e("GpxExporter", "文件另存为失败: $targetPath", e)
+            false
+        }
+    }
+    
+    suspend fun exportToExternalStorage(fileName: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val sourceFile = File(getGpxDirectory(), fileName)
+            if (!sourceFile.exists()) {
+                Log.e("GpxExporter", "源文件不存在: ${sourceFile.absolutePath}")
+                return@withContext null
+            }
+            
+            // 使用外部存储的Downloads目录
+            val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+            val targetFile = File(downloadsDir, fileName)
+            
+            // 确保目标目录存在
+            downloadsDir.mkdirs()
+            
+            // 复制文件
+            sourceFile.copyTo(targetFile, overwrite = true)
+            Log.d("GpxExporter", "文件导出到外部存储成功: ${targetFile.absolutePath}")
+            targetFile.absolutePath
+        } catch (e: Exception) {
+            Log.e("GpxExporter", "导出到外部存储失败: $fileName", e)
+            null
+        }
+    }
 }
