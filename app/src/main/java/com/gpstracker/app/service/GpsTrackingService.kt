@@ -243,11 +243,14 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         
         if (dataList.isNotEmpty()) {
             try {
-                // 使用累积的所有数据重新生成GPX文件
-                synchronized(allGpsData) {
-                    gpxExporter.appendGpsData(allGpsData.toList())
+                // 获取累积的所有数据的副本
+                val allDataCopy = synchronized(allGpsData) {
+                    allGpsData.toList()
                 }
-                android.util.Log.d("GpsTrackingService", "成功保存 ${allGpsData.size} 个GPS点到GPX文件")
+                
+                // 在同步块外调用挂起函数
+                gpxExporter.appendGpsData(allDataCopy)
+                android.util.Log.d("GpsTrackingService", "成功保存 ${allDataCopy.size} 个GPS点到GPX文件")
             } catch (e: Exception) {
                 android.util.Log.e("GpsTrackingService", "保存GPX数据失败", e)
             }
@@ -328,11 +331,16 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         
         // 保存所有剩余数据
         try {
-            synchronized(allGpsData) {
-                if (allGpsData.isNotEmpty()) {
-                    gpxExporter.appendGpsData(allGpsData.toList())
-                    android.util.Log.d("GpsTrackingService", "服务停止时保存了 ${allGpsData.size} 个GPS点")
+            val allDataCopy = synchronized(allGpsData) {
+                allGpsData.toList()
+            }
+            
+            if (allDataCopy.isNotEmpty()) {
+                // 使用 runBlocking 在非协程上下文中调用挂起函数
+                runBlocking {
+                    gpxExporter.appendGpsData(allDataCopy)
                 }
+                android.util.Log.d("GpsTrackingService", "服务停止时保存了 ${allDataCopy.size} 个GPS点")
             }
         } catch (e: Exception) {
             android.util.Log.e("GpsTrackingService", "服务停止时保存数据失败", e)
