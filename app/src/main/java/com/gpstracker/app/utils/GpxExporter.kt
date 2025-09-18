@@ -5,6 +5,7 @@ import android.os.Environment
 import android.util.Log
 import com.gpstracker.app.model.GpsData
 import com.gpstracker.app.model.TrackingState
+import com.gpstracker.app.database.GpsDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -246,6 +247,107 @@ class GpxExporter(private val context: Context) {
             targetFile.absolutePath
         } catch (e: Exception) {
             Log.e("GpxExporter", "导出到外部存储失败: $fileName", e)
+            null
+        }
+    }
+    
+    // 从SQLite数据库导出GPX文件
+    suspend fun exportFromDatabase(gpsDatabase: GpsDatabase, fileName: String? = null): String? = withContext(Dispatchers.IO) {
+        try {
+            val gpsDataList = gpsDatabase.getAllGpsData()
+            if (gpsDataList.isEmpty()) {
+                Log.w("GpxExporter", "数据库中没有GPS数据")
+                return@withContext null
+            }
+            
+            val gpxFileName = fileName ?: "gps_track_${dateFormat.format(Date())}.gpx"
+            val gpxFile = File(getGpxDirectory(), gpxFileName)
+            
+            // 创建GPX文件
+            createNewGpxFile(gpxFile)
+            
+            // 写入所有GPS数据
+            val writer = FileWriter(gpxFile, true)
+            writer.use {
+                gpsDataList.forEach { data ->
+                    val timeStr = timeFormat.format(Date(data.timestamp))
+                    val stateStr = getStateString(data.state)
+                    
+                    it.write("""      <trkpt lat="${data.latitude}" lon="${data.longitude}">
+        <ele>${data.altitude}</ele>
+        <time>$timeStr</time>
+        <extensions>
+          <accuracy>${data.accuracy}</accuracy>
+          <state>$stateStr</state>
+        </extensions>
+      </trkpt>
+""")
+                }
+                
+                // 写入结束标签
+                it.write("    </trkseg>\n")
+                it.write("  </trk>\n")
+                it.write("</gpx>\n")
+            }
+            
+            Log.d("GpxExporter", "从数据库导出GPX文件成功: ${gpxFile.absolutePath}, 包含 ${gpsDataList.size} 个GPS点")
+            gpxFile.absolutePath
+            
+        } catch (e: Exception) {
+            Log.e("GpxExporter", "从数据库导出GPX文件失败", e)
+            null
+        }
+    }
+    
+    // 从SQLite数据库导出指定时间范围的GPX文件
+    suspend fun exportFromDatabaseByDateRange(
+        gpsDatabase: GpsDatabase, 
+        startTime: Long, 
+        endTime: Long, 
+        fileName: String? = null
+    ): String? = withContext(Dispatchers.IO) {
+        try {
+            val gpsDataList = gpsDatabase.getGpsDataByDateRange(startTime, endTime)
+            if (gpsDataList.isEmpty()) {
+                Log.w("GpxExporter", "指定时间范围内没有GPS数据")
+                return@withContext null
+            }
+            
+            val gpxFileName = fileName ?: "gps_track_${dateFormat.format(Date(startTime))}_to_${dateFormat.format(Date(endTime))}.gpx"
+            val gpxFile = File(getGpxDirectory(), gpxFileName)
+            
+            // 创建GPX文件
+            createNewGpxFile(gpxFile)
+            
+            // 写入GPS数据
+            val writer = FileWriter(gpxFile, true)
+            writer.use {
+                gpsDataList.forEach { data ->
+                    val timeStr = timeFormat.format(Date(data.timestamp))
+                    val stateStr = getStateString(data.state)
+                    
+                    it.write("""      <trkpt lat="${data.latitude}" lon="${data.longitude}">
+        <ele>${data.altitude}</ele>
+        <time>$timeStr</time>
+        <extensions>
+          <accuracy>${data.accuracy}</accuracy>
+          <state>$stateStr</state>
+        </extensions>
+      </trkpt>
+""")
+                }
+                
+                // 写入结束标签
+                it.write("    </trkseg>\n")
+                it.write("  </trk>\n")
+                it.write("</gpx>\n")
+            }
+            
+            Log.d("GpxExporter", "从数据库导出时间范围GPX文件成功: ${gpxFile.absolutePath}, 包含 ${gpsDataList.size} 个GPS点")
+            gpxFile.absolutePath
+            
+        } catch (e: Exception) {
+            Log.e("GpxExporter", "从数据库导出时间范围GPX文件失败", e)
             null
         }
     }

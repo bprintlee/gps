@@ -64,6 +64,11 @@ class ExportActivity : AppCompatActivity() {
             exportAllFiles()
         }
         
+        // 添加从数据库导出按钮
+        binding.exportFromDatabaseButton.setOnClickListener {
+            exportFromDatabase()
+        }
+        
         binding.refreshButton.setOnClickListener {
             loadGpxFiles()
         }
@@ -237,6 +242,39 @@ class ExportActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Toast.makeText(this@ExportActivity, "导出失败：${e.message}", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+    
+    private fun exportFromDatabase() {
+        val serviceIntent = Intent(this, GpsTrackingService::class.java)
+        try {
+            val serviceConnection = object : android.content.ServiceConnection {
+                override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
+                    service?.let {
+                        val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
+                        
+                        // 异步导出
+                        lifecycleScope.launch {
+                            try {
+                                val result = gpsService.exportGpxFromDatabase()
+                                if (result != null) {
+                                    Toast.makeText(this@ExportActivity, "从数据库导出GPX文件成功：$result", Toast.LENGTH_LONG).show()
+                                    loadGpxFiles() // 刷新文件列表
+                                } else {
+                                    Toast.makeText(this@ExportActivity, "从数据库导出GPX文件失败", Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(this@ExportActivity, "导出失败：${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        unbindService(this)
+                    }
+                }
+                override fun onServiceDisconnected(name: android.content.ComponentName?) {}
+            }
+            bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+        } catch (e: Exception) {
+            Toast.makeText(this, "连接服务失败：${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 }

@@ -29,6 +29,7 @@ import com.gpstracker.app.model.GpsData
 import com.gpstracker.app.model.TrackingState
 import com.gpstracker.app.utils.GpxExporter
 import com.gpstracker.app.utils.MqttManager
+import com.gpstracker.app.database.GpsDatabase
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -39,6 +40,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private lateinit var sensorManager: SensorManager
     private lateinit var gpxExporter: GpxExporter
     private lateinit var mqttManager: MqttManager
+    private lateinit var gpsDatabase: GpsDatabase
     
     // 传感器
     private var accelerometer: Sensor? = null
@@ -84,6 +86,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
             gpxExporter = GpxExporter(this)
             mqttManager = MqttManager(this)
+            gpsDatabase = GpsDatabase(this)
             
             // 检测省电模式
             checkPowerSaveMode()
@@ -237,12 +240,20 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             allGpsData.add(gpsData)
         }
         
-        // 暂时禁用MQTT功能，避免闪退
-        // try {
-        //     mqttManager.publishLocation(gpsData)
-        // } catch (e: Exception) {
-        //     android.util.Log.w("GpsTrackingService", "MQTT发送失败，继续GPS跟踪功能", e)
-        // }
+        // 保存到SQLite数据库
+        try {
+            gpsDatabase.insertGpsData(gpsData)
+            android.util.Log.d("GpsTrackingService", "GPS数据已保存到数据库")
+        } catch (e: Exception) {
+            android.util.Log.e("GpsTrackingService", "保存GPS数据到数据库失败", e)
+        }
+        
+        // 尝试发送到MQTT服务器（失败不影响GPS跟踪功能）
+        try {
+            mqttManager.publishLocation(gpsData)
+        } catch (e: Exception) {
+            android.util.Log.w("GpsTrackingService", "MQTT发送失败，继续GPS跟踪功能", e)
+        }
         
         // 根据模式调整保存频率
         val saveThreshold = if (isPowerSaveMode) 5 else 3 // 省电模式5个点保存一次，持续记录模式3个点保存一次
@@ -398,9 +409,46 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     fun isPowerSaveMode(): Boolean = isPowerSaveMode
     fun getLastLocation(): Location? = lastLocation
     fun getGpxDirectoryPath(): String = gpxExporter.getGpxDirectoryPath().absolutePath
-    fun getGpsDataCount(): Int = synchronized(allGpsData) { allGpsData.size }
+    fun getGpsDataCount(): Int {
+        return try {
+            gpsDatabase.getGpsDataCount()
+        } catch (e: Exception) {
+            android.util.Log.e("GpsTrackingService", "获取GPS数据数量失败", e)
+            synchronized(allGpsData) { allGpsData.size }
+        }
+    }
     
     suspend fun getGpxFileInfo(): Map<String, Any> = gpxExporter.getGpxFileInfo()
+    
+    // 从数据库导出GPX文件
+    suspend fun exportGpxFromDatabase(fileName: String? = null): String? {
+        return try {
+            gpxExporter.exportFromDatabase(gpsDatabase, fileName)
+        } catch (e: Exception) {
+            android.util.Log.e("GpsTrackingService", "从数据库导出GPX文件失败", e)
+            null
+        }
+    }
+    
+    // 从数据库导出指定时间范围的GPX文件
+    suspend fun exportGpxFromDatabaseByDateRange(startTime: Long, endTime: Long, fileName: String? = null): String? {
+        return try {
+            gpxExporter.exportFromDatabaseByDateRange(gpsDatabase, startTime, endTime, fileName)
+        } catch (e: Exception) {
+            android.util.Log.e("GpsTrackingService", "从数据库导出时间范围GPX文件失败", e)
+            null
+        }
+    }
+    
+    // 清空数据库
+    fun clearDatabase() {
+        try {
+            gpsDatabase.clearAllData()
+            android.util.Log.d("GpsTrackingService", "数据库已清空")
+        } catch (e: Exception) {
+            android.util.Log.e("GpsTrackingService", "清空数据库失败", e)
+        }
+    }
     
     // 手动切换省电模式
     fun togglePowerSaveMode() {
