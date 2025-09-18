@@ -58,11 +58,14 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private val stepThreshold = 20 // 20步阈值
     private val accelerationThreshold = 2.0f // 加速度阈值
     
-    // 省电模式配置
-    private var isPowerSaveMode = false
-    private var gpsUpdateInterval = 5000L // 默认5秒间隔
+    // 省电模式配置 - 默认开启省电模式
+    private var isPowerSaveMode = true
+    private var gpsUpdateInterval = 10000L // 默认10秒间隔（省电模式）
     private var sensorUpdateInterval = SensorManager.SENSOR_DELAY_UI // 默认UI延迟
-    private var stateCheckInterval = 10000L // 默认10秒检查一次状态
+    private var stateCheckInterval = 15000L // 默认15秒检查一次状态（省电模式）
+    
+    // 最后位置信息
+    private var lastLocation: Location? = null
     
     inner class GpsTrackingBinder : Binder() {
         fun getService(): GpsTrackingService = this@GpsTrackingService
@@ -141,20 +144,14 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     }
     
     private fun checkPowerSaveMode() {
-        val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-        isPowerSaveMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            powerManager.isPowerSaveMode
-        } else {
-            false
-        }
-        
+        // 不再检查系统省电模式，使用应用内省电模式设置
         // 根据省电模式调整参数
         if (isPowerSaveMode) {
             gpsUpdateInterval = 10000L // 省电模式：10秒间隔
             stateCheckInterval = 15000L // 省电模式：15秒检查一次
         } else {
-            gpsUpdateInterval = 5000L // 正常模式：5秒间隔
-            stateCheckInterval = 10000L // 正常模式：10秒检查一次
+            gpsUpdateInterval = 3000L // 持续记录模式：3秒间隔
+            stateCheckInterval = 5000L // 持续记录模式：5秒检查一次
         }
     }
     
@@ -194,6 +191,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     override fun onLocationChanged(location: Location) {
         lastGpsTime = System.currentTimeMillis()
         isGpsAvailable = true
+        lastLocation = location // 保存最后位置
         
         val gpsData = GpsData(
             latitude = location.latitude,
@@ -206,8 +204,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         
         gpsDataQueue.offer(gpsData)
         
-        // 定期保存数据
-        if (gpsDataQueue.size >= 10) {
+        // 根据模式调整保存频率
+        val saveThreshold = if (isPowerSaveMode) 5 else 3 // 省电模式5个点保存一次，持续记录模式3个点保存一次
+        if (gpsDataQueue.size >= saveThreshold) {
             serviceScope.launch {
                 saveGpsData()
             }
@@ -232,7 +231,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     private suspend fun saveGpsData() {
         val dataList = mutableListOf<GpsData>()
-        repeat(10) {
+        val saveThreshold = if (isPowerSaveMode) 5 else 3
+        repeat(saveThreshold) {
             gpsDataQueue.poll()?.let { dataList.add(it) }
         }
         
@@ -325,6 +325,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     fun getStepCount(): Int = stepCount
     fun getLastAcceleration(): Float = lastAcceleration
     fun isPowerSaveMode(): Boolean = isPowerSaveMode
+    fun getLastLocation(): Location? = lastLocation
     
     // 手动切换省电模式
     fun togglePowerSaveMode() {

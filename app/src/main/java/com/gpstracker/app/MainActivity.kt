@@ -224,9 +224,34 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun updateLastLocationInfo() {
-        // 这里可以添加获取最后位置信息的逻辑
-        // 暂时显示默认信息
-        binding.lastLocationText.text = if (isTracking) "获取中..." else "未知"
+        if (isTracking) {
+            // 从服务获取最后位置信息
+            val serviceIntent = Intent(this, GpsTrackingService::class.java)
+            try {
+                val serviceConnection = object : android.content.ServiceConnection {
+                    override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
+                        service?.let {
+                            val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
+                            val lastLocation = gpsService.getLastLocation()
+                            if (lastLocation != null) {
+                                val lat = String.format("%.6f", lastLocation.latitude)
+                                val lon = String.format("%.6f", lastLocation.longitude)
+                                binding.lastLocationText.text = "纬度: $lat\n经度: $lon"
+                            } else {
+                                binding.lastLocationText.text = "获取中..."
+                            }
+                            unbindService(this)
+                        }
+                    }
+                    override fun onServiceDisconnected(name: android.content.ComponentName?) {}
+                }
+                bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+            } catch (e: Exception) {
+                binding.lastLocationText.text = "获取中..."
+            }
+        } else {
+            binding.lastLocationText.text = "未知"
+        }
     }
     
     private fun togglePowerSaveMode() {
@@ -259,10 +284,10 @@ class MainActivity : AppCompatActivity() {
             ContextCompat.getColor(this, if (isPowerSave) android.R.color.holo_orange_dark else android.R.color.holo_green_dark)
         )
         
-        val buttonText = if (isPowerSave) "正常模式" else "省电模式"
+        val buttonText = if (isPowerSave) "持续记录" else "省电模式"
         binding.powerSaveButton.text = buttonText
         
-        Toast.makeText(this, if (isPowerSave) "已开启省电模式" else "已关闭省电模式", Toast.LENGTH_SHORT).show()
+        // 移除弹窗提示，静默切换模式
     }
     
 }
