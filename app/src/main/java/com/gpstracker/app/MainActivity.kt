@@ -35,12 +35,19 @@ class MainActivity : AppCompatActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
         
-        setupClickListeners()
-        updateUI()
-        startStatusMonitoring()
+        try {
+            binding = ActivityMainBinding.inflate(layoutInflater)
+            setContentView(binding.root)
+            
+            setupClickListeners()
+            updateUI()
+            startStatusMonitoring()
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "onCreate failed", e)
+            // 如果初始化失败，显示错误信息
+            Toast.makeText(this, "应用初始化失败，请重启应用", Toast.LENGTH_LONG).show()
+        }
     }
     
     private fun setupClickListeners() {

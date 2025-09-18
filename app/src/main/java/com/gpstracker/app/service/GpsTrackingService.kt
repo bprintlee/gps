@@ -78,15 +78,23 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     override fun onCreate() {
         super.onCreate()
-        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        gpxExporter = GpxExporter(this)
-        mqttManager = MqttManager(this)
         
-        // 检测省电模式
-        checkPowerSaveMode()
-        setupSensors()
-        createNotificationChannel()
+        try {
+            locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            gpxExporter = GpxExporter(this)
+            mqttManager = MqttManager(this)
+            
+            // 检测省电模式
+            checkPowerSaveMode()
+            setupSensors()
+            createNotificationChannel()
+            
+            android.util.Log.d("GpsTrackingService", "Service created successfully")
+        } catch (e: Exception) {
+            android.util.Log.e("GpsTrackingService", "Service creation failed", e)
+            throw e
+        }
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
