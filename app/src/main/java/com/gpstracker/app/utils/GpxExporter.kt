@@ -44,7 +44,8 @@ class GpxExporter(private val context: Context) {
                 Log.d("GpxExporter", "创建新的GPX文件")
             }
             
-            appendToGpxFile(gpxFile, dataList)
+            // 直接写入数据，不使用追加模式
+            writeGpsDataToFile(gpxFile, dataList)
             Log.d("GpxExporter", "成功保存 ${dataList.size} 个GPS点")
         } catch (e: Exception) {
             Log.e("GpxExporter", "保存GPX数据失败", e)
@@ -67,6 +68,43 @@ class GpxExporter(private val context: Context) {
     <trkseg>
 """)
         }
+    }
+    
+    private fun writeGpsDataToFile(gpxFile: File, dataList: List<GpsData>) {
+        // 读取现有文件内容
+        val existingContent = if (gpxFile.exists()) {
+            gpxFile.readText()
+        } else {
+            ""
+        }
+        
+        // 如果文件不存在或为空，创建新文件
+        if (existingContent.isEmpty()) {
+            createNewGpxFile(gpxFile)
+        }
+        
+        // 在 </trkseg> 之前插入新的GPS点
+        val newPoints = StringBuilder()
+        dataList.forEach { data ->
+            val timeStr = timeFormat.format(Date(data.timestamp))
+            val stateStr = getStateString(data.state)
+            
+            newPoints.append("""      <trkpt lat="${data.latitude}" lon="${data.longitude}">
+        <ele>${data.altitude}</ele>
+        <time>$timeStr</time>
+        <extensions>
+          <accuracy>${data.accuracy}</accuracy>
+          <state>$stateStr</state>
+        </extensions>
+      </trkpt>
+""")
+        }
+        
+        // 重新写入整个文件
+        val content = gpxFile.readText()
+        val updatedContent = content.replace("    </trkseg>", "$newPoints    </trkseg>")
+        
+        gpxFile.writeText(updatedContent)
     }
     
     private fun appendToGpxFile(gpxFile: File, dataList: List<GpsData>) {

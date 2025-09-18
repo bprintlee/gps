@@ -64,9 +64,10 @@ class MainActivity : AppCompatActivity() {
                     val serviceConnection = object : android.content.ServiceConnection {
                         override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
                             service?.let {
-                                val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
-                                val gpxPath = gpsService.getGpxDirectoryPath()
-                                Toast.makeText(this@MainActivity, "GPX文件保存在: $gpxPath", Toast.LENGTH_LONG).show()
+                            val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
+                            val gpxPath = gpsService.getGpxDirectoryPath()
+                            val gpsCount = gpsService.getGpsDataCount()
+                            Toast.makeText(this@MainActivity, "GPX文件保存在: $gpxPath\n已记录 $gpsCount 个GPS点", Toast.LENGTH_LONG).show()
                                 unbindService(this)
                             }
                         }

@@ -51,6 +51,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     // 数据收集
     private val gpsDataQueue = ConcurrentLinkedQueue<GpsData>()
+    private val allGpsData = mutableListOf<GpsData>() // 累积所有GPS数据
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
     // 配置参数 - 优化省电
@@ -202,7 +203,11 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             state = currentState
         )
         
+        // 添加到队列和累积列表
         gpsDataQueue.offer(gpsData)
+        synchronized(allGpsData) {
+            allGpsData.add(gpsData)
+        }
         
         // 根据模式调整保存频率
         val saveThreshold = if (isPowerSaveMode) 5 else 3 // 省电模式5个点保存一次，持续记录模式3个点保存一次
@@ -238,8 +243,11 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         
         if (dataList.isNotEmpty()) {
             try {
-                gpxExporter.appendGpsData(dataList)
-                android.util.Log.d("GpsTrackingService", "成功保存 ${dataList.size} 个GPS点到GPX文件")
+                // 使用累积的所有数据重新生成GPX文件
+                synchronized(allGpsData) {
+                    gpxExporter.appendGpsData(allGpsData.toList())
+                }
+                android.util.Log.d("GpsTrackingService", "成功保存 ${allGpsData.size} 个GPS点到GPX文件")
             } catch (e: Exception) {
                 android.util.Log.e("GpsTrackingService", "保存GPX数据失败", e)
             }
@@ -317,12 +325,20 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         super.onDestroy()
         stopLocationUpdates()
         stopSensorUpdates()
-        serviceScope.cancel()
         
-        // 保存剩余数据
-        serviceScope.launch {
-            saveGpsData()
+        // 保存所有剩余数据
+        try {
+            synchronized(allGpsData) {
+                if (allGpsData.isNotEmpty()) {
+                    gpxExporter.appendGpsData(allGpsData.toList())
+                    android.util.Log.d("GpsTrackingService", "服务停止时保存了 ${allGpsData.size} 个GPS点")
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("GpsTrackingService", "服务停止时保存数据失败", e)
         }
+        
+        serviceScope.cancel()
     }
     
     fun getCurrentState(): TrackingState = currentState
@@ -332,6 +348,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     fun isPowerSaveMode(): Boolean = isPowerSaveMode
     fun getLastLocation(): Location? = lastLocation
     fun getGpxDirectoryPath(): String = gpxExporter.getGpxDirectoryPath().absolutePath
+    fun getGpsDataCount(): Int = synchronized(allGpsData) { allGpsData.size }
     
     // 手动切换省电模式
     fun togglePowerSaveMode() {
