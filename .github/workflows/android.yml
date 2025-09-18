@@ -50,14 +50,33 @@ jobs:
     - name: Update Version in build.gradle
       run: |
         # 更新app/build.gradle中的版本信息
-        sed -i "s/versionName \".*\"/versionName \"${{ steps.version.outputs.VERSION_NAME }}\"/" app/build.gradle
-        sed -i "s/versionCode .*/versionCode ${{ steps.version.outputs.VERSION_CODE }}/" app/build.gradle
+        echo "Current version info:"
+        grep -E "(versionName|versionCode)" app/build.gradle
         
-        echo "Updated build.gradle with version info"
-        cat app/build.gradle | grep -E "(versionName|versionCode)"
+        # 使用更安全的sed命令
+        sed -i "s/versionName \"[^\"]*\"/versionName \"${{ steps.version.outputs.VERSION_NAME }}\"/" app/build.gradle
+        sed -i "s/versionCode [0-9]*/versionCode ${{ steps.version.outputs.VERSION_CODE }}/" app/build.gradle
+        
+        echo "Updated version info:"
+        grep -E "(versionName|versionCode)" app/build.gradle
+        
+        # 验证文件内容
+        echo "Build.gradle content around version lines:"
+        grep -A 2 -B 2 -E "(versionName|versionCode)" app/build.gradle
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
+
+    - name: Validate build.gradle
+      run: |
+        # 验证build.gradle文件格式
+        echo "Validating build.gradle file..."
+        if grep -q "versionName" app/build.gradle && grep -q "versionCode" app/build.gradle; then
+          echo "Build.gradle validation passed"
+        else
+          echo "Build.gradle validation failed - missing version info"
+          exit 1
+        fi
 
     - name: Build with Gradle
       run: ./gradlew build
