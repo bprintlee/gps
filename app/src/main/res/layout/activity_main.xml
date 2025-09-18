@@ -81,6 +81,34 @@
                 android:text="未知"
                 android:textSize="14sp" />
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="后台服务"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/serviceStatusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="未运行"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="步数统计"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/stepCountText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="14sp" />
+
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>

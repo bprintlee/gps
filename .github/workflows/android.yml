@@ -19,6 +19,43 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+    - name: Generate Version Info
+      id: version
+      run: |
+        # 获取当前时间作为版本号
+        BUILD_TIME=$(date +"%Y%m%d%H%M")
+        BUILD_DATE=$(date +"%Y-%m-%d %H:%M:%S")
+        
+        # 获取Git信息
+        GIT_COMMIT=$(git rev-parse --short HEAD)
+        GIT_BRANCH=$(git branch --show-current)
+        
+        # 生成版本名称和代码
+        VERSION_NAME="1.0.0-build.$BUILD_TIME"
+        VERSION_CODE=$BUILD_TIME
+        
+        echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
+        echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_OUTPUT
+        echo "BUILD_DATE=$BUILD_DATE" >> $GITHUB_OUTPUT
+        echo "GIT_COMMIT=$GIT_COMMIT" >> $GITHUB_OUTPUT
+        echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_OUTPUT
+        
+        echo "Generated version info:"
+        echo "Version Name: $VERSION_NAME"
+        echo "Version Code: $VERSION_CODE"
+        echo "Build Date: $BUILD_DATE"
+        echo "Git Commit: $GIT_COMMIT"
+        echo "Git Branch: $GIT_BRANCH"
+
+    - name: Update Version in build.gradle
+      run: |
+        # 更新app/build.gradle中的版本信息
+        sed -i "s/versionName \".*\"/versionName \"${{ steps.version.outputs.VERSION_NAME }}\"/" app/build.gradle
+        sed -i "s/versionCode .*/versionCode ${{ steps.version.outputs.VERSION_CODE }}/" app/build.gradle
+        
+        echo "Updated build.gradle with version info"
+        cat app/build.gradle | grep -E "(versionName|versionCode)"
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
@@ -31,10 +68,10 @@ jobs:
     - name: Build APK
       run: ./gradlew assembleDebug
 
-    - name: Upload APK artifact
+    - name: Upload Debug APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug-apk
+        name: gps-tracker-debug-${{ steps.version.outputs.VERSION_CODE }}.apk
         path: app/build/outputs/apk/debug/app-debug.apk
 
     - name: Build Release APK
@@ -43,12 +80,49 @@ jobs:
     - name: Upload Release APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: app-release-apk
+        name: gps-tracker-release-${{ steps.version.outputs.VERSION_CODE }}.apk
         path: app/build/outputs/apk/release/app-release-unsigned.apk
+
+    - name: Create Release
+      if: github.ref == 'refs/heads/main'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.version.outputs.VERSION_NAME }}
+        release_name: GPS Tracker v${{ steps.version.outputs.VERSION_NAME }}
+        body: |
+          ## GPS跟踪器 v${{ steps.version.outputs.VERSION_NAME }}
+          
+          **构建信息:**
+          - 构建时间: ${{ steps.version.outputs.BUILD_DATE }}
+          - Git提交: ${{ steps.version.outputs.GIT_COMMIT }}
+          - Git分支: ${{ steps.version.outputs.GIT_BRANCH }}
+          
+          **功能特性:**
+          - GPS位置跟踪
+          - 智能状态检测（室内/室外/活跃/驾驶）
+          - GPX文件生成和导出
+          - 后台服务运行
+          - 电量优化
+          
+          **下载链接:**
+          - Debug版本: gps-tracker-debug-${{ steps.version.outputs.VERSION_CODE }}.apk
+          - Release版本: gps-tracker-release-${{ steps.version.outputs.VERSION_CODE }}.apk
+        draft: false
+        prerelease: false
 
     - name: Generate APK Info
       run: |
+        echo "=========================================="
         echo "APK Build completed successfully!"
-        echo "Debug APK: app-debug.apk"
-        echo "Release APK: app-release-unsigned.apk"
-        echo "Build time: $(date)"
+        echo "=========================================="
+        echo "Version Name: ${{ steps.version.outputs.VERSION_NAME }}"
+        echo "Version Code: ${{ steps.version.outputs.VERSION_CODE }}"
+        echo "Build Date: ${{ steps.version.outputs.BUILD_DATE }}"
+        echo "Git Commit: ${{ steps.version.outputs.GIT_COMMIT }}"
+        echo "Git Branch: ${{ steps.version.outputs.GIT_BRANCH }}"
+        echo "=========================================="
+        echo "Debug APK: gps-tracker-debug-${{ steps.version.outputs.VERSION_CODE }}.apk"
+        echo "Release APK: gps-tracker-release-${{ steps.version.outputs.VERSION_CODE }}.apk"
+        echo "=========================================="
