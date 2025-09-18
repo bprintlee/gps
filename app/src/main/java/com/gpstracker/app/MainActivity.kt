@@ -51,8 +51,8 @@ class MainActivity : AppCompatActivity() {
         }
         
         binding.exportButton.setOnClickListener {
-            // TODO: 实现GPX导出功能
-            Toast.makeText(this, "导出功能开发中...", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, ExportActivity::class.java)
+            startActivity(intent)
         }
     }
     
@@ -113,4 +113,5 @@ class MainActivity : AppCompatActivity() {
             binding.statusText.text = "已停止"
         }
     }
+    
 }

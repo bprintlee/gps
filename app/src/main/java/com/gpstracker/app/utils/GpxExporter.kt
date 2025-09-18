@@ -115,4 +115,6 @@ class GpxExporter(private val context: Context) {
         val file = File(getGpxDirectory(), fileName)
         file.delete()
     }
+    
+    fun getGpxDirectoryPath(): File = getGpxDirectory()
 }

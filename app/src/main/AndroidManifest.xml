@@ -46,6 +46,11 @@
             </intent-filter>
         </activity>
         
+        <activity
+            android:name=".ExportActivity"
+            android:exported="false"
+            android:theme="@style/Theme.GPSTracker" />
+        
         <!-- GPS跟踪服务 -->
         <service
             android:name=".service.GpsTrackingService"
