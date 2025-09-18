@@ -105,29 +105,20 @@ jobs:
         VERSION_CODE=${{ steps.version.outputs.VERSION_CODE }}
         
         # 创建新的版本记录
-        cat > VERSION.md << 'EOF'
-# GPS Tracker 版本记录
-
-## 当前版本
-- **版本号**: $VERSION_NAME
-- **版本代码**: $VERSION_CODE
-- **构建日期**: $BUILD_DATE
-- **Git提交**: $GIT_COMMIT
-
-## 版本历史
-
-### $VERSION_NAME ($BUILD_DATE)
-- 自动构建版本
-- Git提交: $GIT_COMMIT
-- 版本代码: $VERSION_CODE
-
-EOF
-        
-        # 替换变量
-        sed -i "s/\$VERSION_NAME/$VERSION_NAME/g" VERSION.md
-        sed -i "s/\$VERSION_CODE/$VERSION_CODE/g" VERSION.md
-        sed -i "s/\$BUILD_DATE/$BUILD_DATE/g" VERSION.md
-        sed -i "s/\$GIT_COMMIT/$GIT_COMMIT/g" VERSION.md
+        echo "# GPS Tracker 版本记录" > VERSION.md
+        echo "" >> VERSION.md
+        echo "## 当前版本" >> VERSION.md
+        echo "- **版本号**: $VERSION_NAME" >> VERSION.md
+        echo "- **版本代码**: $VERSION_CODE" >> VERSION.md
+        echo "- **构建日期**: $BUILD_DATE" >> VERSION.md
+        echo "- **Git提交**: $GIT_COMMIT" >> VERSION.md
+        echo "" >> VERSION.md
+        echo "## 版本历史" >> VERSION.md
+        echo "" >> VERSION.md
+        echo "### $VERSION_NAME ($BUILD_DATE)" >> VERSION.md
+        echo "- 自动构建版本" >> VERSION.md
+        echo "- Git提交: $GIT_COMMIT" >> VERSION.md
+        echo "- 版本代码: $VERSION_CODE" >> VERSION.md
         
         echo "版本文档已更新"
         cat VERSION.md
