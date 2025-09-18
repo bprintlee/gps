@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
 
     steps:
     - uses: actions/checkout@v4
@@ -113,12 +116,10 @@ jobs:
 
     - name: Create Release
       if: github.ref == 'refs/heads/main'
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
         tag_name: v${{ steps.version.outputs.VERSION_NAME }}
-        release_name: GPS Tracker v${{ steps.version.outputs.VERSION_NAME }}
+        name: GPS Tracker v${{ steps.version.outputs.VERSION_NAME }}
         body: |
           ## GPS跟踪器 v${{ steps.version.outputs.VERSION_NAME }}
           
@@ -137,6 +138,9 @@ jobs:
           **下载链接:**
           - Debug版本: gps-tracker-debug-${{ steps.version.outputs.VERSION_CODE }}.apk
           - Release版本: gps-tracker-release-${{ steps.version.outputs.VERSION_CODE }}.apk
+        files: |
+          app/build/outputs/apk/debug/app-debug.apk
+          app/build/outputs/apk/release/app-release-unsigned.apk
         draft: false
         prerelease: false
 
