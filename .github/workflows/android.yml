@@ -35,10 +35,22 @@ jobs:
         
         # 读取当前版本信息
         if [ -f "VERSION.md" ]; then
-          CURRENT_VERSION=$(grep "版本号" VERSION.md | sed 's/.*: //' | sed 's/\*//g' | tr -d ' ')
-          CURRENT_CODE=$(grep "版本代码" VERSION.md | sed 's/.*: //' | sed 's/\*//g' | tr -d ' ')
+          CURRENT_VERSION=$(grep "版本号" VERSION.md | sed 's/.*: //' | sed 's/\*//g' | tr -d ' ' | head -1)
+          CURRENT_CODE=$(grep "版本代码" VERSION.md | sed 's/.*: //' | sed 's/\*//g' | tr -d ' ' | head -1)
         else
           CURRENT_VERSION="1.0.0"
+          CURRENT_CODE="1"
+        fi
+        
+        # 验证版本号格式
+        if [[ ! "$CURRENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "警告: 版本号格式不正确，使用默认值"
+          CURRENT_VERSION="1.0.0"
+        fi
+        
+        # 验证版本代码格式
+        if [[ ! "$CURRENT_CODE" =~ ^[0-9]+$ ]]; then
+          echo "警告: 版本代码格式不正确，使用默认值"
           CURRENT_CODE="1"
         fi
         
