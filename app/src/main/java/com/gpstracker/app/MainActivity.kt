@@ -60,6 +60,10 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this, ExportActivity::class.java)
             startActivity(intent)
         }
+        
+        binding.powerSaveButton.setOnClickListener {
+            togglePowerSaveMode()
+        }
     }
     
     private fun checkPermissionsAndStartTracking() {
@@ -145,7 +149,8 @@ class MainActivity : AppCompatActivity() {
                                     gpsService.getCurrentState(), 
                                     gpsService.isGpsAvailable(),
                                     gpsService.getStepCount(),
-                                    gpsService.getLastAcceleration()
+                                    gpsService.getLastAcceleration(),
+                                    gpsService.isPowerSaveMode()
                                 )
                                 unbindService(this)
                             }
@@ -155,14 +160,14 @@ class MainActivity : AppCompatActivity() {
                     bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
                 } catch (e: Exception) {
                     // 服务连接失败，显示默认状态
-                    updateStatusDisplay(null, false, 0, 0f)
+                    updateStatusDisplay(null, false, 0, 0f, false)
                 }
             } else {
-                updateStatusDisplay(null, false, 0, 0f)
+                updateStatusDisplay(null, false, 0, 0f, false)
             }
         } else {
             // 服务未运行
-            updateStatusDisplay(null, false, 0, 0f)
+            updateStatusDisplay(null, false, 0, 0f, false)
         }
     }
     
@@ -172,7 +177,7 @@ class MainActivity : AppCompatActivity() {
         return runningServices.any { it.service.className == GpsTrackingService::class.java.name }
     }
     
-    private fun updateStatusDisplay(currentState: TrackingState?, gpsAvailable: Boolean, stepCount: Int, acceleration: Float) {
+    private fun updateStatusDisplay(currentState: TrackingState?, gpsAvailable: Boolean, stepCount: Int, acceleration: Float, isPowerSave: Boolean) {
         // 更新GPS状态
         binding.gpsStatusText.text = if (gpsAvailable) "有信号" else "无信号"
         binding.gpsStatusText.setTextColor(
@@ -211,6 +216,9 @@ class MainActivity : AppCompatActivity() {
         // 更新步数统计
         binding.stepCountText.text = stepCount.toString()
         
+        // 更新省电模式状态
+        updatePowerSaveStatus(isPowerSave)
+        
         // 更新最后位置信息
         updateLastLocationInfo()
     }
@@ -219,6 +227,42 @@ class MainActivity : AppCompatActivity() {
         // 这里可以添加获取最后位置信息的逻辑
         // 暂时显示默认信息
         binding.lastLocationText.text = if (isTracking) "获取中..." else "未知"
+    }
+    
+    private fun togglePowerSaveMode() {
+        if (isTracking) {
+            val serviceIntent = Intent(this, GpsTrackingService::class.java)
+            try {
+                val serviceConnection = object : android.content.ServiceConnection {
+                    override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
+                        service?.let {
+                            val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
+                            gpsService.togglePowerSaveMode()
+                            updatePowerSaveStatus(gpsService.isPowerSaveMode())
+                            unbindService(this)
+                        }
+                    }
+                    override fun onServiceDisconnected(name: android.content.ComponentName?) {}
+                }
+                bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+            } catch (e: Exception) {
+                Toast.makeText(this, "切换省电模式失败", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "请先开始GPS跟踪", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun updatePowerSaveStatus(isPowerSave: Boolean) {
+        binding.powerSaveStatusText.text = if (isPowerSave) "开启" else "关闭"
+        binding.powerSaveStatusText.setTextColor(
+            ContextCompat.getColor(this, if (isPowerSave) android.R.color.holo_orange_dark else android.R.color.holo_green_dark)
+        )
+        
+        val buttonText = if (isPowerSave) "正常模式" else "省电模式"
+        binding.powerSaveButton.text = buttonText
+        
+        Toast.makeText(this, if (isPowerSave) "已开启省电模式" else "已关闭省电模式", Toast.LENGTH_SHORT).show()
     }
     
 }

@@ -53,10 +53,16 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private val gpsDataQueue = ConcurrentLinkedQueue<GpsData>()
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
-    // 配置参数
+    // 配置参数 - 优化省电
     private val gpsTimeoutMs = 30000L // 30秒GPS超时
     private val stepThreshold = 20 // 20步阈值
     private val accelerationThreshold = 2.0f // 加速度阈值
+    
+    // 省电模式配置
+    private var isPowerSaveMode = false
+    private var gpsUpdateInterval = 5000L // 默认5秒间隔
+    private var sensorUpdateInterval = SensorManager.SENSOR_DELAY_UI // 默认UI延迟
+    private var stateCheckInterval = 10000L // 默认10秒检查一次状态
     
     inner class GpsTrackingBinder : Binder() {
         fun getService(): GpsTrackingService = this@GpsTrackingService
@@ -70,6 +76,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         gpxExporter = GpxExporter(this)
         
+        // 检测省电模式
+        checkPowerSaveMode()
         setupSensors()
         createNotificationChannel()
     }
@@ -95,10 +103,14 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     private fun startLocationUpdates() {
         try {
+            // 根据省电模式调整GPS更新频率
+            val interval = if (isPowerSaveMode) gpsUpdateInterval * 2 else gpsUpdateInterval
+            val distance = if (isPowerSaveMode) 5f else 1f // 省电模式降低精度要求
+            
             locationManager.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
-                1000L, // 1秒更新间隔
-                1f, // 1米精度
+                interval,
+                distance,
                 this,
                 Looper.getMainLooper()
             )
@@ -108,11 +120,14 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     }
     
     private fun startSensorUpdates() {
+        // 根据省电模式调整传感器更新频率
+        val sensorDelay = if (isPowerSaveMode) SensorManager.SENSOR_DELAY_UI else SensorManager.SENSOR_DELAY_NORMAL
+        
         accelerometer?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(this, it, sensorDelay)
         }
         stepCounter?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(this, it, sensorDelay)
         }
     }
     
@@ -120,8 +135,26 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         serviceScope.launch {
             while (isActive) {
                 updateTrackingState()
-                delay(5000) // 每5秒检查一次状态
+                delay(stateCheckInterval) // 根据省电模式调整检查频率
             }
+        }
+    }
+    
+    private fun checkPowerSaveMode() {
+        val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        isPowerSaveMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            powerManager.isPowerSaveMode
+        } else {
+            false
+        }
+        
+        // 根据省电模式调整参数
+        if (isPowerSaveMode) {
+            gpsUpdateInterval = 10000L // 省电模式：10秒间隔
+            stateCheckInterval = 15000L // 省电模式：15秒检查一次
+        } else {
+            gpsUpdateInterval = 5000L // 正常模式：5秒间隔
+            stateCheckInterval = 10000L // 正常模式：10秒检查一次
         }
     }
     
@@ -133,6 +166,11 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             gpsTimeout -> {
                 currentState = TrackingState.INDOOR
                 isGpsAvailable = false
+                // 室内状态时降低GPS更新频率
+                if (!isPowerSaveMode) {
+                    stopLocationUpdates()
+                    startLocationUpdates()
+                }
             }
             stepCount >= stepThreshold -> {
                 currentState = TrackingState.ACTIVE
@@ -258,10 +296,22 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         }
     }
     
+    private fun stopLocationUpdates() {
+        try {
+            locationManager.removeUpdates(this)
+        } catch (e: SecurityException) {
+            e.printStackTrace()
+        }
+    }
+    
+    private fun stopSensorUpdates() {
+        sensorManager.unregisterListener(this)
+    }
+    
     override fun onDestroy() {
         super.onDestroy()
-        locationManager.removeUpdates(this)
-        sensorManager.unregisterListener(this)
+        stopLocationUpdates()
+        stopSensorUpdates()
         serviceScope.cancel()
         
         // 保存剩余数据
@@ -274,6 +324,21 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     fun isGpsAvailable(): Boolean = isGpsAvailable
     fun getStepCount(): Int = stepCount
     fun getLastAcceleration(): Float = lastAcceleration
+    fun isPowerSaveMode(): Boolean = isPowerSaveMode
+    
+    // 手动切换省电模式
+    fun togglePowerSaveMode() {
+        isPowerSaveMode = !isPowerSaveMode
+        checkPowerSaveMode()
+        
+        // 重新启动位置更新以应用新设置
+        stopLocationUpdates()
+        startLocationUpdates()
+        
+        // 重新启动传感器更新以应用新设置
+        stopSensorUpdates()
+        startSensorUpdates()
+    }
     
     companion object {
         private const val CHANNEL_ID = "gps_tracking_channel"

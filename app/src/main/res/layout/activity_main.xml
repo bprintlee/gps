@@ -109,6 +109,20 @@
                 android:text="0"
                 android:textSize="14sp" />
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="省电模式"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/powerSaveStatusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="关闭"
+                android:textSize="14sp" />
+
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>
@@ -144,15 +158,33 @@
 
     </LinearLayout>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/exportButton"
+    <LinearLayout
+        android:id="@+id/bottomButtons"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        android:text="@string/export_gpx"
+        android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/controlButtons" />
+        app:layout_constraintTop_toBottomOf="@+id/controlButtons">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/exportButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:text="@string/export_gpx" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/powerSaveButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="省电模式" />
+
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
