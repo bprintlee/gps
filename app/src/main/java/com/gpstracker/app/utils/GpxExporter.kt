@@ -26,6 +26,19 @@ class GpxExporter(private val context: Context) {
             val created = directory.mkdirs()
             Log.d("GpxExporter", "创建GPX目录: $created, 路径: ${directory.absolutePath}")
         }
+        
+        // 验证目录是否可写
+        if (!directory.canWrite()) {
+            Log.e("GpxExporter", "GPX目录不可写: ${directory.absolutePath}")
+            // 尝试使用缓存目录作为备选
+            val cacheDir = File(context.cacheDir, "gpx_tracks")
+            if (!cacheDir.exists()) {
+                cacheDir.mkdirs()
+            }
+            Log.d("GpxExporter", "使用缓存目录: ${cacheDir.absolutePath}")
+            return cacheDir
+        }
+        
         return directory
     }
     
@@ -71,25 +84,30 @@ class GpxExporter(private val context: Context) {
     }
     
     private fun writeGpsDataToFile(gpxFile: File, dataList: List<GpsData>) {
-        // 读取现有文件内容
-        val existingContent = if (gpxFile.exists()) {
-            gpxFile.readText()
-        } else {
-            ""
-        }
-        
-        // 如果文件不存在或为空，创建新文件
-        if (existingContent.isEmpty()) {
-            createNewGpxFile(gpxFile)
-        }
-        
-        // 在 </trkseg> 之前插入新的GPS点
-        val newPoints = StringBuilder()
-        dataList.forEach { data ->
-            val timeStr = timeFormat.format(Date(data.timestamp))
-            val stateStr = getStateString(data.state)
+        try {
+            // 确保父目录存在
+            gpxFile.parentFile?.mkdirs()
             
-            newPoints.append("""      <trkpt lat="${data.latitude}" lon="${data.longitude}">
+            // 读取现有文件内容
+            val existingContent = if (gpxFile.exists() && gpxFile.length() > 0) {
+                gpxFile.readText()
+            } else {
+                ""
+            }
+            
+            // 如果文件不存在或为空，创建新文件
+            if (existingContent.isEmpty()) {
+                createNewGpxFile(gpxFile)
+                Log.d("GpxExporter", "创建新的GPX文件: ${gpxFile.absolutePath}")
+            }
+            
+            // 在 </trkseg> 之前插入新的GPS点
+            val newPoints = StringBuilder()
+            dataList.forEach { data ->
+                val timeStr = timeFormat.format(Date(data.timestamp))
+                val stateStr = getStateString(data.state)
+                
+                newPoints.append("""      <trkpt lat="${data.latitude}" lon="${data.longitude}">
         <ele>${data.altitude}</ele>
         <time>$timeStr</time>
         <extensions>
@@ -98,13 +116,19 @@ class GpxExporter(private val context: Context) {
         </extensions>
       </trkpt>
 """)
+            }
+            
+            // 重新写入整个文件
+            val content = gpxFile.readText()
+            val updatedContent = content.replace("    </trkseg>", "$newPoints    </trkseg>")
+            
+            gpxFile.writeText(updatedContent)
+            Log.d("GpxExporter", "成功写入 ${dataList.size} 个GPS点到文件: ${gpxFile.absolutePath}")
+            
+        } catch (e: Exception) {
+            Log.e("GpxExporter", "写入GPX文件失败: ${gpxFile.absolutePath}", e)
+            throw e
         }
-        
-        // 重新写入整个文件
-        val content = gpxFile.readText()
-        val updatedContent = content.replace("    </trkseg>", "$newPoints    </trkseg>")
-        
-        gpxFile.writeText(updatedContent)
     }
     
     private fun appendToGpxFile(gpxFile: File, dataList: List<GpsData>) {
@@ -165,4 +189,21 @@ class GpxExporter(private val context: Context) {
     }
     
     fun getGpxDirectoryPath(): File = getGpxDirectory()
+    
+    suspend fun getGpxFileInfo(): Map<String, Any> = withContext(Dispatchers.IO) {
+        val directory = getGpxDirectory()
+        val files = directory.listFiles()?.filter { it.extension == "gpx" } ?: emptyList()
+        
+        mapOf(
+            "directory" to directory.absolutePath,
+            "fileCount" to files.size,
+            "files" to files.map { 
+                mapOf(
+                    "name" to it.name,
+                    "size" to it.length(),
+                    "lastModified" to it.lastModified()
+                )
+            }
+        )
+    }
 }

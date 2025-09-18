@@ -57,17 +57,37 @@ class MainActivity : AppCompatActivity() {
         }
         
         binding.exportButton.setOnClickListener {
-            // 显示GPX文件保存路径
+            // 显示GPX文件保存路径和详细信息
             if (isTracking) {
                 val serviceIntent = Intent(this, GpsTrackingService::class.java)
                 try {
                     val serviceConnection = object : android.content.ServiceConnection {
                         override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
                             service?.let {
-                            val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
-                            val gpxPath = gpsService.getGpxDirectoryPath()
-                            val gpsCount = gpsService.getGpsDataCount()
-                            Toast.makeText(this@MainActivity, "GPX文件保存在: $gpxPath\n已记录 $gpsCount 个GPS点", Toast.LENGTH_LONG).show()
+                                val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
+                                val gpxPath = gpsService.getGpxDirectoryPath()
+                                val gpsCount = gpsService.getGpsDataCount()
+                                
+                                // 异步获取文件信息
+                                lifecycleScope.launch {
+                                    try {
+                                        val fileInfo = gpsService.getGpxFileInfo()
+                                        val fileCount = fileInfo["fileCount"] as Int
+                                        val files = fileInfo["files"] as List<Map<String, Any>>
+                                        
+                                        val message = if (fileCount > 0) {
+                                            val totalSize = files.sumOf { it["size"] as Long }
+                                            "GPX文件保存在: $gpxPath\n已记录 $gpsCount 个GPS点\n文件数量: $fileCount\n总大小: ${totalSize} 字节"
+                                        } else {
+                                            "GPX文件保存在: $gpxPath\n已记录 $gpsCount 个GPS点\n暂无GPX文件"
+                                        }
+                                        
+                                        Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+                                    } catch (e: Exception) {
+                                        Toast.makeText(this@MainActivity, "GPX文件保存在: $gpxPath\n已记录 $gpsCount 个GPS点", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                                
                                 unbindService(this)
                             }
                         }
@@ -75,7 +95,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
                 } catch (e: Exception) {
-                    Toast.makeText(this, "无法获取GPX文件路径", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "无法获取GPX文件信息", Toast.LENGTH_SHORT).show()
                 }
             } else {
                 val intent = Intent(this, ExportActivity::class.java)

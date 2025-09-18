@@ -358,6 +358,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     fun getGpxDirectoryPath(): String = gpxExporter.getGpxDirectoryPath().absolutePath
     fun getGpsDataCount(): Int = synchronized(allGpsData) { allGpsData.size }
     
+    suspend fun getGpxFileInfo(): Map<String, Any> = gpxExporter.getGpxFileInfo()
+    
     // 手动切换省电模式
     fun togglePowerSaveMode() {
         isPowerSaveMode = !isPowerSaveMode
