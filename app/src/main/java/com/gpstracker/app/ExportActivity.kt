@@ -1,6 +1,7 @@
 package com.gpstracker.app
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -16,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.gpstracker.app.databinding.ActivityExportBinding
 import com.gpstracker.app.utils.GpxExporter
+import com.gpstracker.app.service.GpsTrackingService
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
