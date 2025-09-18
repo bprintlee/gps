@@ -66,6 +66,10 @@ class MainActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 add(Manifest.permission.ACTIVITY_RECOGNITION)
             }
+            // Android 13+ 需要通知权限
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
         
         val permissionsToRequest = permissions.filter {

@@ -1,5 +1,6 @@
 package com.gpstracker.app.service
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -7,6 +8,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -20,6 +22,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.gpstracker.app.MainActivity
 import com.gpstracker.app.R
 import com.gpstracker.app.model.GpsData
@@ -234,7 +237,16 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private fun updateNotification() {
         val notification = createNotification()
         val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager.notify(NOTIFICATION_ID, notification)
+        
+        // 检查通知权限 (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
+                == PackageManager.PERMISSION_GRANTED) {
+                notificationManager.notify(NOTIFICATION_ID, notification)
+            }
+        } else {
+            notificationManager.notify(NOTIFICATION_ID, notification)
+        }
     }
     
     private fun getStateText(): String {
