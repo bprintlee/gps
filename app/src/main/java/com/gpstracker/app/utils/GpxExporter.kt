@@ -88,18 +88,16 @@ class GpxExporter(private val context: Context) {
             // 确保父目录存在
             gpxFile.parentFile?.mkdirs()
             
-            // 读取现有文件内容
-            val existingContent = if (gpxFile.exists() && gpxFile.length() > 0) {
-                gpxFile.readText()
-            } else {
-                ""
-            }
+            Log.d("GpxExporter", "开始写入 ${dataList.size} 个GPS点到文件: ${gpxFile.absolutePath}")
             
-            // 如果文件不存在或为空，创建新文件
-            if (existingContent.isEmpty()) {
+            // 如果文件不存在，创建新文件
+            if (!gpxFile.exists()) {
                 createNewGpxFile(gpxFile)
                 Log.d("GpxExporter", "创建新的GPX文件: ${gpxFile.absolutePath}")
             }
+            
+            // 读取现有文件内容
+            val existingContent = gpxFile.readText()
             
             // 在 </trkseg> 之前插入新的GPS点
             val newPoints = StringBuilder()
@@ -119,11 +117,15 @@ class GpxExporter(private val context: Context) {
             }
             
             // 重新写入整个文件
-            val content = gpxFile.readText()
-            val updatedContent = content.replace("    </trkseg>", "$newPoints    </trkseg>")
+            val updatedContent = existingContent.replace("    </trkseg>", "$newPoints    </trkseg>")
             
             gpxFile.writeText(updatedContent)
             Log.d("GpxExporter", "成功写入 ${dataList.size} 个GPS点到文件: ${gpxFile.absolutePath}")
+            
+            // 验证文件内容
+            val finalContent = gpxFile.readText()
+            val pointCount = finalContent.split("<trkpt").size - 1
+            Log.d("GpxExporter", "文件验证: 包含 $pointCount 个GPS点")
             
         } catch (e: Exception) {
             Log.e("GpxExporter", "写入GPX文件失败: ${gpxFile.absolutePath}", e)

@@ -33,10 +33,21 @@ jobs:
         GIT_COMMIT=$(git rev-parse --short HEAD)
         GIT_BRANCH=$(git branch --show-current)
         
-        # 生成版本名称和代码
-        VERSION_NAME="1.0.0-build.$BUILD_TIME"
-        # 使用递增的版本代码，基于构建时间
-        VERSION_CODE=$(( $(date +%s) % 1000000 + 1000 ))
+        # 读取当前版本信息
+        if [ -f "VERSION.md" ]; then
+          CURRENT_VERSION=$(grep "版本号" VERSION.md | sed 's/.*: //' | sed 's/\*//g' | tr -d ' ')
+          CURRENT_CODE=$(grep "版本代码" VERSION.md | sed 's/.*: //' | sed 's/\*//g' | tr -d ' ')
+        else
+          CURRENT_VERSION="1.0.0"
+          CURRENT_CODE="1"
+        fi
+        
+        # 递增版本代码
+        NEW_CODE=$((CURRENT_CODE + 1))
+        
+        # 生成版本名称
+        VERSION_NAME="${CURRENT_VERSION}-build.${BUILD_TIME}"
+        VERSION_CODE=$NEW_CODE
         
         echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
         echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_OUTPUT
@@ -45,8 +56,10 @@ jobs:
         echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_OUTPUT
         
         echo "Generated version info:"
-        echo "Version Name: $VERSION_NAME"
-        echo "Version Code: $VERSION_CODE"
+        echo "Current Version: $CURRENT_VERSION"
+        echo "Current Code: $CURRENT_CODE"
+        echo "New Version Name: $VERSION_NAME"
+        echo "New Version Code: $VERSION_CODE"
         echo "Build Date: $BUILD_DATE"
         echo "Git Commit: $GIT_COMMIT"
         echo "Git Branch: $GIT_BRANCH"
@@ -77,11 +90,41 @@ jobs:
         
         # 验证版本代码是否在合理范围内
         VERSION_CODE=${{ steps.version.outputs.VERSION_CODE }}
-        if [ "$VERSION_CODE" -lt 1000 ] || [ "$VERSION_CODE" -gt 1000000 ]; then
+        if [ "$VERSION_CODE" -lt 1 ] || [ "$VERSION_CODE" -gt 1000000 ]; then
             echo "警告: 版本代码 $VERSION_CODE 可能不在合理范围内"
         else
             echo "版本代码 $VERSION_CODE 在合理范围内"
         fi
+
+    - name: Update Version Document
+      run: |
+        # 更新VERSION.md文档
+        BUILD_DATE=$(date +"%Y-%m-%d")
+        GIT_COMMIT=${{ steps.version.outputs.GIT_COMMIT }}
+        VERSION_NAME=${{ steps.version.outputs.VERSION_NAME }}
+        VERSION_CODE=${{ steps.version.outputs.VERSION_CODE }}
+        
+        # 创建新的版本记录
+        cat > VERSION.md << EOF
+# GPS Tracker 版本记录
+
+## 当前版本
+- **版本号**: $VERSION_NAME
+- **版本代码**: $VERSION_CODE
+- **构建日期**: $BUILD_DATE
+- **Git提交**: $GIT_COMMIT
+
+## 版本历史
+
+### $VERSION_NAME ($BUILD_DATE)
+- 自动构建版本
+- Git提交: $GIT_COMMIT
+- 版本代码: $VERSION_CODE
+
+EOF
+        
+        echo "版本文档已更新"
+        cat VERSION.md
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew

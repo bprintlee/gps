@@ -258,6 +258,9 @@ class MainActivity : AppCompatActivity() {
         // 更新步数统计
         binding.stepCountText.text = stepCount.toString()
         
+        // 更新已保存点数
+        updateSavedPointsCount()
+        
         // 更新省电模式状态
         updatePowerSaveStatus(isPowerSave)
         
@@ -330,6 +333,30 @@ class MainActivity : AppCompatActivity() {
         binding.powerSaveButton.text = buttonText
         
         // 移除弹窗提示，静默切换模式
+    }
+    
+    private fun updateSavedPointsCount() {
+        if (isTracking) {
+            val serviceIntent = Intent(this, GpsTrackingService::class.java)
+            try {
+                val serviceConnection = object : android.content.ServiceConnection {
+                    override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
+                        service?.let {
+                            val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
+                            val savedCount = gpsService.getGpsDataCount()
+                            binding.savedPointsText.text = savedCount.toString()
+                            unbindService(this)
+                        }
+                    }
+                    override fun onServiceDisconnected(name: android.content.ComponentName?) {}
+                }
+                bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+            } catch (e: Exception) {
+                binding.savedPointsText.text = "0"
+            }
+        } else {
+            binding.savedPointsText.text = "0"
+        }
     }
     
 }

@@ -28,6 +28,7 @@ import com.gpstracker.app.R
 import com.gpstracker.app.model.GpsData
 import com.gpstracker.app.model.TrackingState
 import com.gpstracker.app.utils.GpxExporter
+import com.gpstracker.app.utils.MqttManager
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -37,6 +38,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private lateinit var locationManager: LocationManager
     private lateinit var sensorManager: SensorManager
     private lateinit var gpxExporter: GpxExporter
+    private lateinit var mqttManager: MqttManager
     
     // 传感器
     private var accelerometer: Sensor? = null
@@ -79,6 +81,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         gpxExporter = GpxExporter(this)
+        mqttManager = MqttManager(this)
         
         // 检测省电模式
         checkPowerSaveMode()
@@ -96,6 +99,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         startLocationUpdates()
         startSensorUpdates()
         startStateMonitoring()
+        
+        // 连接MQTT
+        mqttManager.connect()
         
         return START_STICKY
     }
@@ -218,6 +224,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         synchronized(allGpsData) {
             allGpsData.add(gpsData)
         }
+        
+        // 发送到MQTT服务器
+        mqttManager.publishLocation(gpsData)
         
         // 根据模式调整保存频率
         val saveThreshold = if (isPowerSaveMode) 5 else 3 // 省电模式5个点保存一次，持续记录模式3个点保存一次
@@ -342,6 +351,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         super.onDestroy()
         stopLocationUpdates()
         stopSensorUpdates()
+        
+        // 断开MQTT连接
+        mqttManager.disconnect()
         
         // 保存所有剩余数据
         try {
