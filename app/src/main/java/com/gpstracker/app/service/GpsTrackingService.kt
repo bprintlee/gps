@@ -72,7 +72,12 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, createNotification())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForeground(NOTIFICATION_ID, createNotification())
+        } else {
+            @Suppress("DEPRECATION")
+            startForeground(NOTIFICATION_ID, createNotification())
+        }
         startLocationUpdates()
         startSensorUpdates()
         startStateMonitoring()

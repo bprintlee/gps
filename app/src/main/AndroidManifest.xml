@@ -48,6 +48,7 @@
             android:name=".service.GpsTrackingService"
             android:enabled="true"
             android:exported="false"
+            tools:targetApi="29"
             android:foregroundServiceType="location" />
             
     </application>

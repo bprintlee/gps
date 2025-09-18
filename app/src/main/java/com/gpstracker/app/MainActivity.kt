@@ -81,7 +81,11 @@ class MainActivity : AppCompatActivity() {
     
     private fun startTracking() {
         val intent = Intent(this, GpsTrackingService::class.java)
-        startForegroundService(intent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
         isTracking = true
         updateUI()
         Toast.makeText(this, "开始GPS跟踪", Toast.LENGTH_SHORT).show()
