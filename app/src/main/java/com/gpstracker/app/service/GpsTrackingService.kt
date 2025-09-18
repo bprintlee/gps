@@ -100,8 +100,12 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         startSensorUpdates()
         startStateMonitoring()
         
-        // 连接MQTT
-        mqttManager.connect()
+        // 连接MQTT（失败不影响GPS跟踪功能）
+        try {
+            mqttManager.connect()
+        } catch (e: Exception) {
+            android.util.Log.w("GpsTrackingService", "MQTT连接失败，继续GPS跟踪功能", e)
+        }
         
         return START_STICKY
     }
@@ -225,8 +229,12 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             allGpsData.add(gpsData)
         }
         
-        // 发送到MQTT服务器
-        mqttManager.publishLocation(gpsData)
+        // 发送到MQTT服务器（失败不影响GPS跟踪功能）
+        try {
+            mqttManager.publishLocation(gpsData)
+        } catch (e: Exception) {
+            android.util.Log.w("GpsTrackingService", "MQTT发送失败，继续GPS跟踪功能", e)
+        }
         
         // 根据模式调整保存频率
         val saveThreshold = if (isPowerSaveMode) 5 else 3 // 省电模式5个点保存一次，持续记录模式3个点保存一次

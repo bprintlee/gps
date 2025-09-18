@@ -50,11 +50,13 @@ class MqttManager(private val context: Context) {
                 
                 override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
                     Log.e("MqttManager", "MQTT连接失败", exception)
+                    // 连接失败时不要抛出异常，避免应用崩溃
                 }
             })
             
         } catch (e: Exception) {
             Log.e("MqttManager", "MQTT连接异常", e)
+            // 捕获所有异常，避免应用崩溃
         }
     }
     
