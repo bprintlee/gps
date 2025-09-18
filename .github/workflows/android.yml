@@ -105,7 +105,7 @@ jobs:
         VERSION_CODE=${{ steps.version.outputs.VERSION_CODE }}
         
         # 创建新的版本记录
-        cat > VERSION.md << EOF
+        cat > VERSION.md << 'EOF'
 # GPS Tracker 版本记录
 
 ## 当前版本
@@ -122,6 +122,12 @@ jobs:
 - 版本代码: $VERSION_CODE
 
 EOF
+        
+        # 替换变量
+        sed -i "s/\$VERSION_NAME/$VERSION_NAME/g" VERSION.md
+        sed -i "s/\$VERSION_CODE/$VERSION_CODE/g" VERSION.md
+        sed -i "s/\$BUILD_DATE/$BUILD_DATE/g" VERSION.md
+        sed -i "s/\$GIT_COMMIT/$GIT_COMMIT/g" VERSION.md
         
         echo "版本文档已更新"
         cat VERSION.md
