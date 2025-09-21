@@ -90,12 +90,9 @@ class LogManager(private val context: Context) {
             val files = logDir.listFiles()?.sortedBy { it.lastModified() } ?: return
             
             // 删除最旧的文件
-            while (files.size >= MAX_LOG_FILES) {
-                val oldestFile = files.firstOrNull()
-                oldestFile?.delete()
-                if (oldestFile != null) {
-                    files.remove(oldestFile)
-                }
+            val filesToDelete = files.take(files.size - MAX_LOG_FILES + 1)
+            filesToDelete.forEach { file ->
+                file.delete()
             }
             
             // 重命名当前文件
