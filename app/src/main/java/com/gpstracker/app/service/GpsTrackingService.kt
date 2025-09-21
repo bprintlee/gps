@@ -183,11 +183,11 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         // 不再检查系统省电模式，使用应用内省电模式设置
         // 根据省电模式调整参数
         if (isPowerSaveMode) {
-            gpsUpdateInterval = 10000L // 省电模式：10秒间隔
-            stateCheckInterval = 15000L // 省电模式：15秒检查一次
+            gpsUpdateInterval = 5000L // 省电模式：5秒间隔（减少间隔以提高响应速度）
+            stateCheckInterval = 5000L // 省电模式：5秒检查一次（减少间隔）
         } else {
             gpsUpdateInterval = 3000L // 持续记录模式：3秒间隔
-            stateCheckInterval = 5000L // 持续记录模式：5秒检查一次
+            stateCheckInterval = 3000L // 持续记录模式：3秒检查一次
         }
     }
     
@@ -229,15 +229,26 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     }
     
     private fun manageTripState(previousState: TrackingState, newState: TrackingState) {
-        // 当从室内状态切换到室外/活跃/驾驶状态时，开始新行程
-        if (previousState == TrackingState.INDOOR && 
-            (newState == TrackingState.OUTDOOR || newState == TrackingState.ACTIVE || newState == TrackingState.DRIVING)) {
-            startNewTrip()
-        }
-        // 当从室外/活跃/驾驶状态切换到室内状态时，结束当前行程
-        else if ((previousState == TrackingState.OUTDOOR || previousState == TrackingState.ACTIVE || previousState == TrackingState.DRIVING) && 
-                 newState == TrackingState.INDOOR) {
-            endCurrentTrip()
+        // 改进的行程管理逻辑
+        when {
+            // 当获得GPS信号且没有活跃行程时，开始新行程
+            newState != TrackingState.INDOOR && !isTripActive && isGpsAvailable -> {
+                startNewTrip()
+            }
+            // 当从室内状态切换到室外/活跃/驾驶状态时，开始新行程
+            previousState == TrackingState.INDOOR && 
+            (newState == TrackingState.OUTDOOR || newState == TrackingState.ACTIVE || newState == TrackingState.DRIVING) -> {
+                startNewTrip()
+            }
+            // 当从室外/活跃/驾驶状态切换到室内状态时，结束当前行程
+            (previousState == TrackingState.OUTDOOR || previousState == TrackingState.ACTIVE || previousState == TrackingState.DRIVING) && 
+            newState == TrackingState.INDOOR -> {
+                endCurrentTrip()
+            }
+            // 当GPS超时时，也结束当前行程
+            newState == TrackingState.INDOOR && !isGpsAvailable && isTripActive -> {
+                endCurrentTrip()
+            }
         }
     }
     
@@ -272,6 +283,11 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         isGpsAvailable = true
         lastLocation = location // 保存最后位置
         
+        // 如果获得了GPS信号但没有活跃行程，立即开始一个新行程
+        if (!isTripActive) {
+            startNewTrip()
+        }
+        
         val gpsData = GpsData(
             latitude = location.latitude,
             longitude = location.longitude,
@@ -283,7 +299,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         )
         
         // 添加调试信息
-        android.util.Log.d("GpsTrackingService", "创建GPS数据: tripId=$currentTripId, state=$currentState, isTripActive=$isTripActive")
+        android.util.Log.d("GpsTrackingService", "创建GPS数据: tripId=$currentTripId, state=$currentState, isTripActive=$isTripActive, lat=${location.latitude}, lon=${location.longitude}")
         
         // 添加到队列和累积列表
         gpsDataQueue.offer(gpsData)
