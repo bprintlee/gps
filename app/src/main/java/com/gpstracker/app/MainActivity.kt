@@ -113,6 +113,14 @@ class MainActivity : AppCompatActivity() {
         binding.powerSaveButton.setOnClickListener {
             togglePowerSaveMode()
         }
+        
+        binding.startTripButton.setOnClickListener {
+            startTrip()
+        }
+        
+        binding.stopTripButton.setOnClickListener {
+            stopTrip()
+        }
     }
     
     private fun checkPermissionsAndStartTracking() {
@@ -165,6 +173,10 @@ class MainActivity : AppCompatActivity() {
     private fun updateUI() {
         binding.startButton.isEnabled = !isTracking
         binding.stopButton.isEnabled = isTracking
+        
+        // 更新行程按钮状态
+        binding.startTripButton.isEnabled = isTracking
+        binding.stopTripButton.isEnabled = isTracking
         
         if (isTracking) {
             binding.statusText.text = "跟踪中..."
@@ -278,6 +290,9 @@ class MainActivity : AppCompatActivity() {
         
         // 更新行程信息
         updateTripInfo(currentTripId, isTripActive)
+        
+        // 更新行程按钮状态
+        updateTripButtonStates(isTripActive)
     }
     
     private fun updateLastLocationInfo() {
@@ -329,6 +344,64 @@ class MainActivity : AppCompatActivity() {
                 bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
             } catch (e: Exception) {
                 Toast.makeText(this, "切换省电模式失败", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "请先开始GPS跟踪", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun startTrip() {
+        if (isTracking) {
+            val serviceIntent = Intent(this, GpsTrackingService::class.java)
+            try {
+                val serviceConnection = object : android.content.ServiceConnection {
+                    override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
+                        service?.let {
+                            val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
+                            val success = gpsService.startTrip()
+                            if (success) {
+                                Toast.makeText(this@MainActivity, "行程已开始", Toast.LENGTH_SHORT).show()
+                                updateTripButtonStates(gpsService.isTripActive())
+                            } else {
+                                Toast.makeText(this@MainActivity, "无法开始行程，可能已有活跃行程", Toast.LENGTH_SHORT).show()
+                            }
+                            unbindService(this)
+                        }
+                    }
+                    override fun onServiceDisconnected(name: android.content.ComponentName?) {}
+                }
+                bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+            } catch (e: Exception) {
+                Toast.makeText(this, "开始行程失败", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "请先开始GPS跟踪", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun stopTrip() {
+        if (isTracking) {
+            val serviceIntent = Intent(this, GpsTrackingService::class.java)
+            try {
+                val serviceConnection = object : android.content.ServiceConnection {
+                    override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
+                        service?.let {
+                            val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
+                            val success = gpsService.stopTrip()
+                            if (success) {
+                                Toast.makeText(this@MainActivity, "行程已结束", Toast.LENGTH_SHORT).show()
+                                updateTripButtonStates(gpsService.isTripActive())
+                            } else {
+                                Toast.makeText(this@MainActivity, "无法结束行程，可能没有活跃行程", Toast.LENGTH_SHORT).show()
+                            }
+                            unbindService(this)
+                        }
+                    }
+                    override fun onServiceDisconnected(name: android.content.ComponentName?) {}
+                }
+                bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+            } catch (e: Exception) {
+                Toast.makeText(this, "结束行程失败", Toast.LENGTH_SHORT).show()
             }
         } else {
             Toast.makeText(this, "请先开始GPS跟踪", Toast.LENGTH_SHORT).show()
@@ -407,6 +480,27 @@ class MainActivity : AppCompatActivity() {
         } else {
             binding.totalTripsText.text = "0"
         }
+    }
+    
+    private fun updateTripButtonStates(isTripActive: Boolean) {
+        binding.startTripButton.isEnabled = isTracking && !isTripActive
+        binding.stopTripButton.isEnabled = isTracking && isTripActive
+        
+        // 更新按钮文本颜色
+        val startButtonColor = if (binding.startTripButton.isEnabled) {
+            ContextCompat.getColor(this, android.R.color.holo_green_dark)
+        } else {
+            ContextCompat.getColor(this, android.R.color.darker_gray)
+        }
+        
+        val stopButtonColor = if (binding.stopTripButton.isEnabled) {
+            ContextCompat.getColor(this, android.R.color.holo_red_dark)
+        } else {
+            ContextCompat.getColor(this, android.R.color.darker_gray)
+        }
+        
+        binding.startTripButton.setTextColor(startButtonColor)
+        binding.stopTripButton.setTextColor(stopButtonColor)
     }
     
 }

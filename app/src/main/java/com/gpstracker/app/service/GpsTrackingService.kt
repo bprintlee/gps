@@ -229,27 +229,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     }
     
     private fun manageTripState(previousState: TrackingState, newState: TrackingState) {
-        // 改进的行程管理逻辑
-        when {
-            // 当获得GPS信号且没有活跃行程时，开始新行程
-            newState != TrackingState.INDOOR && !isTripActive && isGpsAvailable -> {
-                startNewTrip()
-            }
-            // 当从室内状态切换到室外/活跃/驾驶状态时，开始新行程
-            previousState == TrackingState.INDOOR && 
-            (newState == TrackingState.OUTDOOR || newState == TrackingState.ACTIVE || newState == TrackingState.DRIVING) -> {
-                startNewTrip()
-            }
-            // 当从室外/活跃/驾驶状态切换到室内状态时，结束当前行程
-            (previousState == TrackingState.OUTDOOR || previousState == TrackingState.ACTIVE || previousState == TrackingState.DRIVING) && 
-            newState == TrackingState.INDOOR -> {
-                endCurrentTrip()
-            }
-            // 当GPS超时时，也结束当前行程
-            newState == TrackingState.INDOOR && !isGpsAvailable && isTripActive -> {
-                endCurrentTrip()
-            }
-        }
+        // 移除自动行程管理逻辑，改为手动控制
+        // 行程的开始和结束完全由用户控制
+        android.util.Log.d("GpsTrackingService", "状态变化: $previousState -> $newState, 当前行程: $currentTripId, 活跃: $isTripActive")
     }
     
     private fun startNewTrip() {
@@ -282,11 +264,6 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         lastGpsTime = System.currentTimeMillis()
         isGpsAvailable = true
         lastLocation = location // 保存最后位置
-        
-        // 如果获得了GPS信号但没有活跃行程，立即开始一个新行程
-        if (!isTripActive) {
-            startNewTrip()
-        }
         
         val gpsData = GpsData(
             latitude = location.latitude,
@@ -480,6 +457,31 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     // 行程管理相关方法
     fun getCurrentTripId(): String? = currentTripId
     fun isTripActive(): Boolean = isTripActive
+    
+    // 手动开始行程
+    fun startTrip(): Boolean {
+        return if (!isTripActive) {
+            startNewTrip()
+            android.util.Log.d("GpsTrackingService", "用户手动开始行程: $currentTripId")
+            true
+        } else {
+            android.util.Log.w("GpsTrackingService", "行程已活跃，无法开始新行程")
+            false
+        }
+    }
+    
+    // 手动结束行程
+    fun stopTrip(): Boolean {
+        return if (isTripActive && currentTripId != null) {
+            endCurrentTrip()
+            android.util.Log.d("GpsTrackingService", "用户手动结束行程")
+            true
+        } else {
+            android.util.Log.w("GpsTrackingService", "没有活跃的行程需要结束")
+            false
+        }
+    }
+    
     fun getAllTripIds(): List<String> = gpsDatabase.getAllTripIds()
     fun getGpsDataByTripId(tripId: String): List<GpsData> = gpsDatabase.getGpsDataByTripId(tripId)
     fun getGpsDataCount(): Int {
