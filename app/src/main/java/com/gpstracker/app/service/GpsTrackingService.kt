@@ -246,6 +246,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             currentTripId = generateTripId()
             isTripActive = true
             android.util.Log.d("GpsTrackingService", "开始新行程: $currentTripId")
+        } else {
+            android.util.Log.d("GpsTrackingService", "行程已活跃，跳过开始新行程: $currentTripId")
         }
     }
     
@@ -254,6 +256,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             android.util.Log.d("GpsTrackingService", "结束行程: $currentTripId")
             isTripActive = false
             currentTripId = null
+        } else {
+            android.util.Log.d("GpsTrackingService", "没有活跃的行程需要结束")
         }
     }
     
@@ -277,6 +281,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             state = currentState,
             tripId = currentTripId
         )
+        
+        // 添加调试信息
+        android.util.Log.d("GpsTrackingService", "创建GPS数据: tripId=$currentTripId, state=$currentState, isTripActive=$isTripActive")
         
         // 添加到队列和累积列表
         gpsDataQueue.offer(gpsData)

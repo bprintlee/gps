@@ -230,6 +230,25 @@ class GpsDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, n
     // 获取所有行程ID列表
     fun getAllTripIds(): List<String> {
         val db = readableDatabase
+        
+        // 先检查总数据量
+        val totalCount = getGpsDataCount()
+        Log.d("GpsDatabase", "数据库总GPS数据点: $totalCount")
+        
+        // 检查有trip_id的数据量
+        val cursorWithTripId = db.rawQuery(
+            "SELECT COUNT(*) FROM $TABLE_GPS_DATA WHERE $COLUMN_TRIP_ID IS NOT NULL",
+            null
+        )
+        var countWithTripId = 0
+        cursorWithTripId.use {
+            if (it.moveToFirst()) {
+                countWithTripId = it.getInt(0)
+            }
+        }
+        Log.d("GpsDatabase", "有trip_id的GPS数据点: $countWithTripId")
+        
+        // 查询所有行程ID
         val cursor = db.rawQuery(
             "SELECT DISTINCT $COLUMN_TRIP_ID FROM $TABLE_GPS_DATA WHERE $COLUMN_TRIP_ID IS NOT NULL ORDER BY $COLUMN_TIMESTAMP ASC",
             null
@@ -239,13 +258,14 @@ class GpsDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, n
         cursor.use {
             while (it.moveToNext()) {
                 val tripId = it.getString(0)
-                if (tripId != null) {
+                if (tripId != null && tripId.isNotEmpty()) {
                     tripIds.add(tripId)
+                    Log.d("GpsDatabase", "找到行程ID: $tripId")
                 }
             }
         }
         
-        Log.d("GpsDatabase", "查询到 ${tripIds.size} 个行程")
+        Log.d("GpsDatabase", "查询到 ${tripIds.size} 个行程: $tripIds")
         return tripIds
     }
 }
