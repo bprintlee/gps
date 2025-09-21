@@ -86,20 +86,35 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         super.onCreate()
         
         try {
+            android.util.Log.d("GpsTrackingService", "=== 开始创建GPS跟踪服务 ===")
+            
             locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            android.util.Log.d("GpsTrackingService", "位置管理器初始化完成")
+            
             sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            android.util.Log.d("GpsTrackingService", "传感器管理器初始化完成")
+            
             gpxExporter = GpxExporter(this)
+            android.util.Log.d("GpsTrackingService", "GPX导出器初始化完成")
+            
+            android.util.Log.d("GpsTrackingService", "开始初始化MQTT管理器...")
             mqttManager = MqttManager(this)
+            android.util.Log.d("GpsTrackingService", "MQTT管理器初始化完成")
+            
             gpsDatabase = GpsDatabase(this)
+            android.util.Log.d("GpsTrackingService", "数据库初始化完成")
             
             // 检测省电模式
             checkPowerSaveMode()
             setupSensors()
             createNotificationChannel()
             
-            android.util.Log.d("GpsTrackingService", "Service created successfully")
+            android.util.Log.d("GpsTrackingService", "=== GPS跟踪服务创建成功 ===")
         } catch (e: Exception) {
-            android.util.Log.e("GpsTrackingService", "Service creation failed", e)
+            android.util.Log.e("GpsTrackingService", "=== GPS跟踪服务创建失败 ===", e)
+            android.util.Log.e("GpsTrackingService", "异常类型: ${e.javaClass.simpleName}")
+            android.util.Log.e("GpsTrackingService", "异常消息: ${e.message}")
+            android.util.Log.e("GpsTrackingService", "异常堆栈: ${e.stackTraceToString()}")
             throw e
         }
     }
@@ -116,11 +131,21 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         startStateMonitoring()
         
         // 启用MQTT功能
+        android.util.Log.d("GpsTrackingService", "=== 开始启动MQTT连接 ===")
         try {
-            mqttManager.connect()
-            android.util.Log.d("GpsTrackingService", "MQTT连接已启动")
+            mqttManager?.let { manager ->
+                android.util.Log.d("GpsTrackingService", "MQTT管理器存在，开始连接...")
+                manager.connect()
+                android.util.Log.d("GpsTrackingService", "MQTT连接请求已发送")
+            } ?: run {
+                android.util.Log.e("GpsTrackingService", "MQTT管理器为null，无法连接")
+            }
         } catch (e: Exception) {
-            android.util.Log.w("GpsTrackingService", "MQTT连接失败，继续GPS跟踪功能", e)
+            android.util.Log.e("GpsTrackingService", "=== MQTT连接启动失败 ===", e)
+            android.util.Log.e("GpsTrackingService", "MQTT异常类型: ${e.javaClass.simpleName}")
+            android.util.Log.e("GpsTrackingService", "MQTT异常消息: ${e.message}")
+            android.util.Log.e("GpsTrackingService", "MQTT异常堆栈: ${e.stackTraceToString()}")
+            android.util.Log.w("GpsTrackingService", "MQTT连接失败，继续GPS跟踪功能")
         }
         
         return START_STICKY

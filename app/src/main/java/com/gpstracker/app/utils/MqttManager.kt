@@ -28,25 +28,45 @@ class MqttManager(private val context: Context) {
     private var lastConnectAttempt = 0L
     private val minConnectInterval = 5000L // 5秒最小连接间隔
     
+    // 状态记录
+    private var lastConnectionState = "未连接"
+    private var lastError: Throwable? = null
+    private var connectionAttempts = 0
+    
     fun connect() {
-        // 检查网络连接
-        if (!isNetworkAvailable()) {
-            Log.w("MqttManager", "网络不可用，跳过MQTT连接")
-            return
-        }
-        
-        // 防止频繁连接
-        val currentTime = System.currentTimeMillis()
-        if (isConnecting || (currentTime - lastConnectAttempt) < minConnectInterval) {
-            Log.d("MqttManager", "MQTT连接已在进行中或间隔太短，跳过")
-            return
-        }
-        
-        isConnecting = true
-        lastConnectAttempt = currentTime
+        Log.d("MqttManager", "=== 开始MQTT连接流程 ===")
         
         try {
+            // 检查网络连接
+            if (!isNetworkAvailable()) {
+                Log.w("MqttManager", "网络不可用，跳过MQTT连接")
+                return
+            }
+            Log.d("MqttManager", "网络状态检查通过")
+            
+            // 防止频繁连接
+            val currentTime = System.currentTimeMillis()
+            if (isConnecting) {
+                Log.d("MqttManager", "MQTT连接已在进行中，跳过")
+                return
+            }
+            if ((currentTime - lastConnectAttempt) < minConnectInterval) {
+                Log.d("MqttManager", "连接间隔太短，跳过。距离上次连接: ${currentTime - lastConnectAttempt}ms")
+                return
+            }
+            
+            isConnecting = true
+            lastConnectAttempt = currentTime
+            connectionAttempts++
+            lastConnectionState = "连接中"
+            Log.d("MqttManager", "设置连接状态: isConnecting=true, 尝试次数: $connectionAttempts")
+            
+            Log.d("MqttManager", "开始创建MQTT客户端")
+            Log.d("MqttManager", "服务器URI: $serverUri")
+            Log.d("MqttManager", "客户端ID: $clientId")
+            
             mqttClient = MqttAndroidClient(context, serverUri, clientId)
+            Log.d("MqttManager", "MQTT客户端创建成功")
             
             val options = MqttConnectOptions().apply {
                 isCleanSession = true
@@ -57,44 +77,69 @@ class MqttManager(private val context: Context) {
                 mqttVersion = MqttConnectOptions.MQTT_VERSION_3_1_1
                 isHttpsHostnameVerificationEnabled = false
             }
+            Log.d("MqttManager", "MQTT连接选项配置完成")
             
             mqttClient?.setCallback(object : MqttCallback {
                 override fun connectionLost(cause: Throwable?) {
-                    Log.w("MqttManager", "MQTT连接丢失", cause)
+                    Log.w("MqttManager", "=== MQTT连接丢失 ===", cause)
                     isConnecting = false
+                    cause?.let {
+                        Log.e("MqttManager", "连接丢失原因: ${it.message}", it)
+                        Log.e("MqttManager", "连接丢失堆栈: ${it.stackTraceToString()}")
+                    }
                     // 尝试重新连接
                     serviceScope.launch {
                         delay(5000) // 5秒后重试
                         if (!isConnected()) {
+                            Log.d("MqttManager", "尝试重新连接MQTT")
                             connect()
                         }
                     }
                 }
                 
                 override fun messageArrived(topic: String?, message: MqttMessage?) {
-                    Log.d("MqttManager", "收到消息: $topic - ${message?.toString()}")
+                    Log.d("MqttManager", "收到MQTT消息: $topic -> ${message?.toString()}")
                 }
                 
                 override fun deliveryComplete(token: IMqttDeliveryToken?) {
-                    Log.d("MqttManager", "消息发送完成")
+                    Log.d("MqttManager", "MQTT消息发送完成")
                 }
             })
+            Log.d("MqttManager", "MQTT回调设置完成")
             
+            Log.d("MqttManager", "开始MQTT连接...")
             mqttClient?.connect(options, null, object : IMqttActionListener {
                 override fun onSuccess(asyncActionToken: IMqttToken?) {
-                    Log.d("MqttManager", "MQTT连接成功")
+                    Log.d("MqttManager", "=== MQTT连接成功 ===")
+                    Log.d("MqttManager", "连接令牌: $asyncActionToken")
+                    lastConnectionState = "已连接"
+                    lastError = null
                     isConnecting = false
                 }
                 
                 override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                    Log.e("MqttManager", "MQTT连接失败", exception)
+                    Log.e("MqttManager", "=== MQTT连接失败 ===", exception)
+                    Log.e("MqttManager", "失败令牌: $asyncActionToken")
+                    lastConnectionState = "连接失败"
+                    lastError = exception
+                    exception?.let {
+                        Log.e("MqttManager", "失败原因: ${it.message}", it)
+                        Log.e("MqttManager", "失败堆栈: ${it.stackTraceToString()}")
+                        Log.e("MqttManager", "失败类型: ${it.javaClass.simpleName}")
+                    }
                     isConnecting = false
                     // 连接失败时不要抛出异常，避免应用崩溃
                 }
             })
+            Log.d("MqttManager", "MQTT连接请求已发送")
             
         } catch (e: Exception) {
-            Log.e("MqttManager", "MQTT连接异常", e)
+            Log.e("MqttManager", "=== MQTT连接异常 ===", e)
+            Log.e("MqttManager", "异常类型: ${e.javaClass.simpleName}")
+            Log.e("MqttManager", "异常消息: ${e.message}")
+            Log.e("MqttManager", "异常堆栈: ${e.stackTraceToString()}")
+            lastConnectionState = "连接异常"
+            lastError = e
             isConnecting = false
             // 捕获所有异常，避免应用崩溃
         }
@@ -224,10 +269,34 @@ class MqttManager(private val context: Context) {
             when {
                 isConnecting -> "连接中..."
                 isConnected() -> "已连接"
-                else -> "未连接"
+                else -> lastConnectionState
             }
         } catch (e: Exception) {
             "状态未知"
+        }
+    }
+    
+    /**
+     * 获取详细的MQTT状态信息（用于崩溃日志）
+     */
+    fun getDetailedState(): String {
+        return try {
+            val state = StringBuilder()
+            state.appendLine("=== MQTT详细状态 ===")
+            state.appendLine("连接状态: ${getConnectionInfo()}")
+            state.appendLine("是否连接中: $isConnecting")
+            state.appendLine("连接尝试次数: $connectionAttempts")
+            state.appendLine("最后连接尝试: ${if (lastConnectAttempt > 0) java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(Date(lastConnectAttempt)) else "无"}")
+            state.appendLine("服务器URI: $serverUri")
+            state.appendLine("客户端ID: $clientId")
+            state.appendLine("主题: $topic")
+            state.appendLine("最后错误: ${lastError?.message ?: "无"}")
+            state.appendLine("最后错误类型: ${lastError?.javaClass?.simpleName ?: "无"}")
+            state.appendLine("网络可用: ${isNetworkAvailable()}")
+            state.toString()
+        } catch (e: Exception) {
+            Log.e("MqttManager", "获取详细状态失败", e)
+            "状态获取失败: ${e.message}"
         }
     }
     
