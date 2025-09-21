@@ -358,7 +358,7 @@ class ExportActivity : AppCompatActivity() {
                 }
             }
             .setNegativeButton("取消", null)
-            .setPositiveButton("导出全部", null) { _, _ ->
+            .setPositiveButton("导出全部") { _, _ ->
                 android.util.Log.d("ExportActivity", "用户选择导出全部行程")
                 exportAllTrips(tripIds, gpsService)
             }
