@@ -41,6 +41,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private lateinit var gpxExporter: GpxExporter
     private lateinit var mqttManager: MqttManager
     private lateinit var gpsDatabase: GpsDatabase
+    private lateinit var logManager: com.gpstracker.app.utils.LogManager
     
     // 传感器
     private var accelerometer: Sensor? = null
@@ -96,6 +97,10 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             
             gpxExporter = GpxExporter(this)
             android.util.Log.d("GpsTrackingService", "GPX导出器初始化完成")
+            
+            android.util.Log.d("GpsTrackingService", "开始初始化日志管理器...")
+            logManager = com.gpstracker.app.utils.LogManager(this)
+            android.util.Log.d("GpsTrackingService", "日志管理器初始化完成")
             
             android.util.Log.d("GpsTrackingService", "开始初始化MQTT管理器...")
             mqttManager = MqttManager(this)

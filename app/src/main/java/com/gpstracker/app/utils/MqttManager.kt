@@ -17,6 +17,7 @@ class MqttManager(private val context: Context) {
     
     private var mqttClient: MqttAndroidClient? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val logManager = LogManager(context)
     
     // MQTT配置
     private val serverUri = "tcp://8.153.37.172:1883"
@@ -35,14 +36,17 @@ class MqttManager(private val context: Context) {
     
     fun connect() {
         Log.d("MqttManager", "=== 开始MQTT连接流程 ===")
+        logManager.saveLog("MqttManager", "DEBUG", "开始MQTT连接流程")
         
         try {
             // 检查网络连接
             if (!isNetworkAvailable()) {
                 Log.w("MqttManager", "网络不可用，跳过MQTT连接")
+                logManager.saveLog("MqttManager", "WARN", "网络不可用，跳过MQTT连接")
                 return
             }
             Log.d("MqttManager", "网络状态检查通过")
+            logManager.saveLog("MqttManager", "DEBUG", "网络状态检查通过")
             
             // 防止频繁连接
             val currentTime = System.currentTimeMillis()
@@ -138,6 +142,7 @@ class MqttManager(private val context: Context) {
             Log.e("MqttManager", "异常类型: ${e.javaClass.simpleName}")
             Log.e("MqttManager", "异常消息: ${e.message}")
             Log.e("MqttManager", "异常堆栈: ${e.stackTraceToString()}")
+            logManager.saveLog("MqttManager", "ERROR", "MQTT连接异常: ${e.message}", e)
             lastConnectionState = "连接异常"
             lastError = e
             isConnecting = false

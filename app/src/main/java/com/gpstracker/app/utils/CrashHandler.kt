@@ -141,4 +141,64 @@ class CrashHandler(private val context: Context) : Thread.UncaughtExceptionHandl
             Log.e(TAG, "清理旧日志时出错", e)
         }
     }
+    
+    /**
+     * 创建测试崩溃日志（用于调试页面测试）
+     */
+    fun createTestCrashLog() {
+        try {
+            val logDir = File(context.filesDir, CRASH_LOG_DIR)
+            if (!logDir.exists()) {
+                logDir.mkdirs()
+            }
+            
+            val timestamp = System.currentTimeMillis()
+            val logFile = File(logDir, "crash_${timestamp}.log")
+            
+            PrintWriter(FileWriter(logFile)).use { writer ->
+                writer.println("=== GPS Tracker 测试崩溃日志 ===")
+                writer.println("时间: ${dateFormat.format(Date(timestamp))}")
+                writer.println("线程: main")
+                writer.println("异常类型: TestException")
+                writer.println("异常消息: 这是一个测试崩溃日志")
+                writer.println()
+                writer.println("=== 设备信息 ===")
+                writer.println("Android版本: ${Build.VERSION.RELEASE}")
+                writer.println("API级别: ${Build.VERSION.SDK_INT}")
+                writer.println("设备型号: ${Build.MODEL}")
+                writer.println("制造商: ${Build.MANUFACTURER}")
+                writer.println()
+                writer.println("=== 异常堆栈 ===")
+                writer.println("java.lang.TestException: 这是一个测试崩溃日志")
+                writer.println("    at com.gpstracker.app.DebugActivity.createTestCrash(DebugActivity.kt:123)")
+                writer.println("    at com.gpstracker.app.DebugActivity.onCreate(DebugActivity.kt:45)")
+                writer.println("    at android.app.Activity.performCreate(Activity.java:7136)")
+                writer.println("    at android.app.Activity.performCreate(Activity.java:7127)")
+                writer.println("    at android.app.Instrumentation.callActivityOnCreate(Instrumentation.java:1271)")
+                writer.println("    at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:2893)")
+                writer.println("    at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:3048)")
+                writer.println("    at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:78)")
+                writer.println("    at android.app.servertransaction.TransactionExecutor.executeCallbacks(TransactionExecutor.java:108)")
+                writer.println("    at android.app.servertransaction.TransactionExecutor.execute(TransactionExecutor.java:68)")
+                writer.println("    at android.app.ActivityThread$H.handleMessage(ActivityThread.java:1808)")
+                writer.println("    at android.os.Handler.dispatchMessage(Handler.java:106)")
+                writer.println("    at android.os.Looper.loop(Looper.java:193)")
+                writer.println("    at android.app.ActivityThread.main(ActivityThread.java:6669)")
+                writer.println("    at java.lang.reflect.Method.invoke(Native Method)")
+                writer.println("    at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:493)")
+                writer.println("    at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:858)")
+                writer.println()
+                writer.println("=== 线程信息 ===")
+                writer.println("活动线程数: ${Thread.activeCount()}")
+                writer.println("当前线程: ${Thread.currentThread().name}")
+                writer.println("线程状态: RUNNABLE")
+                writer.flush()
+            }
+            
+            Log.d(TAG, "测试崩溃日志已创建: ${logFile.absolutePath}")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "创建测试崩溃日志时出错", e)
+        }
+    }
 }

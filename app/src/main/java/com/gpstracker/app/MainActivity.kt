@@ -116,6 +116,15 @@ class MainActivity : AppCompatActivity() {
         binding.powerSaveButton.setOnClickListener {
             togglePowerSaveMode()
         }
+        
+        binding.logViewerButton.setOnClickListener {
+            val intent = Intent(this, LogViewerActivity::class.java)
+            startActivity(intent)
+        }
+        
+        binding.debugButton.setOnClickListener {
+            DebugActivity.start(this)
+        }
     }
     
     private fun checkPermissionsAndStartTracking() {
