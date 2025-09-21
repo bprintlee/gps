@@ -115,12 +115,13 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         startSensorUpdates()
         startStateMonitoring()
         
-        // 暂时禁用MQTT功能，避免闪退
-        // try {
-        //     mqttManager.connect()
-        // } catch (e: Exception) {
-        //     android.util.Log.w("GpsTrackingService", "MQTT连接失败，继续GPS跟踪功能", e)
-        // }
+        // 启用MQTT功能
+        try {
+            mqttManager.connect()
+            android.util.Log.d("GpsTrackingService", "MQTT连接已启动")
+        } catch (e: Exception) {
+            android.util.Log.w("GpsTrackingService", "MQTT连接失败，继续GPS跟踪功能", e)
+        }
         
         return START_STICKY
     }
@@ -424,7 +425,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         stopSensorUpdates()
         
         // 断开MQTT连接
-        mqttManager.disconnect()
+        mqttManager.cleanup()
         
         // 保存所有剩余数据
         try {
@@ -532,6 +533,16 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             android.util.Log.d("GpsTrackingService", "数据库已清空")
         } catch (e: Exception) {
             android.util.Log.e("GpsTrackingService", "清空数据库失败", e)
+        }
+    }
+    
+    // 获取MQTT连接状态
+    fun getMqttConnectionInfo(): String {
+        return try {
+            mqttManager.getConnectionInfo()
+        } catch (e: Exception) {
+            android.util.Log.e("GpsTrackingService", "获取MQTT状态失败", e)
+            "状态未知"
         }
     }
     

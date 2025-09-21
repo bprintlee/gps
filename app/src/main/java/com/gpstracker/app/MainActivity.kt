@@ -213,7 +213,8 @@ class MainActivity : AppCompatActivity() {
                                     gpsService.getLastAcceleration(),
                                     gpsService.isPowerSaveMode(),
                                     gpsService.getCurrentTripId(),
-                                    gpsService.isTripActive()
+                                    gpsService.isTripActive(),
+                                    gpsService.getMqttConnectionInfo()
                                 )
                                 unbindService(this)
                             }
@@ -240,7 +241,7 @@ class MainActivity : AppCompatActivity() {
         return runningServices.any { it.service.className == GpsTrackingService::class.java.name }
     }
     
-    private fun updateStatusDisplay(currentState: TrackingState?, gpsAvailable: Boolean, stepCount: Int, acceleration: Float, isPowerSave: Boolean, currentTripId: String?, isTripActive: Boolean) {
+    private fun updateStatusDisplay(currentState: TrackingState?, gpsAvailable: Boolean, stepCount: Int, acceleration: Float, isPowerSave: Boolean, currentTripId: String?, isTripActive: Boolean, mqttStatus: String?) {
         // 更新GPS状态
         binding.gpsStatusText.text = if (gpsAvailable) "有信号" else "无信号"
         binding.gpsStatusText.setTextColor(
@@ -293,6 +294,9 @@ class MainActivity : AppCompatActivity() {
         
         // 更新行程按钮状态
         updateTripButtonStates(isTripActive)
+        
+        // 更新MQTT状态
+        updateMqttStatus(mqttStatus)
     }
     
     private fun updateLastLocationInfo() {
@@ -501,6 +505,20 @@ class MainActivity : AppCompatActivity() {
         
         binding.startTripButton.setTextColor(startButtonColor)
         binding.stopTripButton.setTextColor(stopButtonColor)
+    }
+    
+    private fun updateMqttStatus(mqttStatus: String?) {
+        val status = mqttStatus ?: "未知"
+        binding.mqttStatusText.text = status
+        
+        val statusColor = when (status) {
+            "已连接" -> android.R.color.holo_green_dark
+            "连接中..." -> android.R.color.holo_orange_dark
+            "未连接" -> android.R.color.holo_red_dark
+            else -> android.R.color.darker_gray
+        }
+        
+        binding.mqttStatusText.setTextColor(ContextCompat.getColor(this, statusColor))
     }
     
 }

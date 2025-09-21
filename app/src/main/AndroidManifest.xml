@@ -24,6 +24,12 @@
     
     <!-- 网络权限 -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
+    <!-- Android 14+ 精确闹钟权限 (MQTT重连使用) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <application
         android:name=".GPSTrackerApplication"
@@ -35,6 +41,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.GPSTracker"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="true"
         tools:targetApi="31">
         
         <activity
@@ -59,6 +67,12 @@
             android:exported="false"
             tools:targetApi="29"
             android:foregroundServiceType="location" />
+        
+        <!-- MQTT服务 -->
+        <service
+            android:name="org.eclipse.paho.android.service.MqttService"
+            android:enabled="true"
+            android:exported="false" />
             
     </application>
 

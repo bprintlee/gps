@@ -168,6 +168,20 @@
                 android:text="0"
                 android:textSize="14sp" />
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="MQTT状态"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/mqttStatusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="未连接"
+                android:textSize="14sp" />
+
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>
