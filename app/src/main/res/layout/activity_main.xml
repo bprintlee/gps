@@ -139,6 +139,35 @@
                 android:text="关闭"
                 android:textSize="14sp" />
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="当前行程"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/currentTripText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="无"
+                android:textSize="12sp"
+                android:fontFamily="monospace" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="总行程数"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/totalTripsText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="14sp" />
+
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>
