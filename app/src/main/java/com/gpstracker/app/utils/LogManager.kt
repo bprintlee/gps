@@ -91,8 +91,11 @@ class LogManager(private val context: Context) {
             
             // 删除最旧的文件
             while (files.size >= MAX_LOG_FILES) {
-                files.firstOrNull()?.delete()
-                files.removeAt(0)
+                val oldestFile = files.firstOrNull()
+                oldestFile?.delete()
+                if (oldestFile != null) {
+                    files.remove(oldestFile)
+                }
             }
             
             // 重命名当前文件
