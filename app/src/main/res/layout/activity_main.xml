@@ -192,7 +192,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:orientation="vertical"
-        app:layout_constraintBottom_toTopOf="@+id/tripButtons"
+        app:layout_constraintBottom_toTopOf="@+id/bottomButtons"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/statusCard"
@@ -224,39 +224,6 @@
 
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/tripButtons"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:orientation="horizontal"
-        app:layout_constraintBottom_toTopOf="@+id/bottomButtons"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/controlButtons"
-        app:layout_constraintVertical_chainStyle="packed">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/startTripButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            android:enabled="false"
-            android:text="开始行程"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/stopTripButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:enabled="false"
-            android:text="结束行程"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
-
-    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/bottomButtons"

@@ -113,14 +113,6 @@ class MainActivity : AppCompatActivity() {
         binding.powerSaveButton.setOnClickListener {
             togglePowerSaveMode()
         }
-        
-        binding.startTripButton.setOnClickListener {
-            startTrip()
-        }
-        
-        binding.stopTripButton.setOnClickListener {
-            stopTrip()
-        }
     }
     
     private fun checkPermissionsAndStartTracking() {
@@ -158,25 +150,36 @@ class MainActivity : AppCompatActivity() {
             startService(intent)
         }
         isTracking = true
+        
+        // 自动开始行程
+        serviceScope.launch {
+            delay(2000) // 等待2秒让服务完全启动
+            startTrip()
+        }
+        
         updateUI()
-        Toast.makeText(this, "开始GPS跟踪", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "开始GPS跟踪和行程", Toast.LENGTH_SHORT).show()
     }
     
     private fun stopTracking() {
-        val intent = Intent(this, GpsTrackingService::class.java)
-        stopService(intent)
-        isTracking = false
-        updateUI()
-        Toast.makeText(this, "停止GPS跟踪", Toast.LENGTH_SHORT).show()
+        // 先结束当前行程
+        stopTrip()
+        
+        // 等待一小段时间让行程结束
+        serviceScope.launch {
+            delay(1000)
+            val intent = Intent(this@MainActivity, GpsTrackingService::class.java)
+            stopService(intent)
+            isTracking = false
+            updateUI()
+        }
+        
+        Toast.makeText(this, "停止GPS跟踪和行程", Toast.LENGTH_SHORT).show()
     }
     
     private fun updateUI() {
         binding.startButton.isEnabled = !isTracking
         binding.stopButton.isEnabled = isTracking
-        
-        // 更新行程按钮状态
-        binding.startTripButton.isEnabled = isTracking
-        binding.stopTripButton.isEnabled = isTracking
         
         if (isTracking) {
             binding.statusText.text = "跟踪中..."
@@ -292,8 +295,6 @@ class MainActivity : AppCompatActivity() {
         // 更新行程信息
         updateTripInfo(currentTripId, isTripActive)
         
-        // 更新行程按钮状态
-        updateTripButtonStates(isTripActive)
         
         // 更新MQTT状态
         updateMqttStatus(mqttStatus)
@@ -364,10 +365,9 @@ class MainActivity : AppCompatActivity() {
                             val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
                             val success = gpsService.startTrip()
                             if (success) {
-                                Toast.makeText(this@MainActivity, "行程已开始", Toast.LENGTH_SHORT).show()
-                                updateTripButtonStates(gpsService.isTripActive())
+                                android.util.Log.d("MainActivity", "行程已开始")
                             } else {
-                                Toast.makeText(this@MainActivity, "无法开始行程，可能已有活跃行程", Toast.LENGTH_SHORT).show()
+                                android.util.Log.w("MainActivity", "无法开始行程，可能已有活跃行程")
                             }
                             unbindService(this)
                         }
@@ -376,10 +376,8 @@ class MainActivity : AppCompatActivity() {
                 }
                 bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
             } catch (e: Exception) {
-                Toast.makeText(this, "开始行程失败", Toast.LENGTH_SHORT).show()
+                android.util.Log.e("MainActivity", "开始行程失败", e)
             }
-        } else {
-            Toast.makeText(this, "请先开始GPS跟踪", Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -393,10 +391,9 @@ class MainActivity : AppCompatActivity() {
                             val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
                             val success = gpsService.stopTrip()
                             if (success) {
-                                Toast.makeText(this@MainActivity, "行程已结束", Toast.LENGTH_SHORT).show()
-                                updateTripButtonStates(gpsService.isTripActive())
+                                android.util.Log.d("MainActivity", "行程已结束")
                             } else {
-                                Toast.makeText(this@MainActivity, "无法结束行程，可能没有活跃行程", Toast.LENGTH_SHORT).show()
+                                android.util.Log.w("MainActivity", "无法结束行程，可能没有活跃行程")
                             }
                             unbindService(this)
                         }
@@ -405,10 +402,8 @@ class MainActivity : AppCompatActivity() {
                 }
                 bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
             } catch (e: Exception) {
-                Toast.makeText(this, "结束行程失败", Toast.LENGTH_SHORT).show()
+                android.util.Log.e("MainActivity", "结束行程失败", e)
             }
-        } else {
-            Toast.makeText(this, "请先开始GPS跟踪", Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -486,26 +481,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
-    private fun updateTripButtonStates(isTripActive: Boolean) {
-        binding.startTripButton.isEnabled = isTracking && !isTripActive
-        binding.stopTripButton.isEnabled = isTracking && isTripActive
-        
-        // 更新按钮文本颜色
-        val startButtonColor = if (binding.startTripButton.isEnabled) {
-            ContextCompat.getColor(this, android.R.color.holo_green_dark)
-        } else {
-            ContextCompat.getColor(this, android.R.color.darker_gray)
-        }
-        
-        val stopButtonColor = if (binding.stopTripButton.isEnabled) {
-            ContextCompat.getColor(this, android.R.color.holo_red_dark)
-        } else {
-            ContextCompat.getColor(this, android.R.color.darker_gray)
-        }
-        
-        binding.startTripButton.setTextColor(startButtonColor)
-        binding.stopTripButton.setTextColor(stopButtonColor)
-    }
     
     private fun updateMqttStatus(mqttStatus: String?) {
         val status = mqttStatus ?: "未知"
