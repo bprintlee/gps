@@ -16,11 +16,14 @@ import com.gpstracker.app.service.GpsTrackingService
 import com.gpstracker.app.model.TrackingState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
 class MainActivity : AppCompatActivity() {
     
     private lateinit var binding: ActivityMainBinding
     private var isTracking = false
+    private val serviceScope = CoroutineScope(Dispatchers.Main)
     
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -152,7 +155,7 @@ class MainActivity : AppCompatActivity() {
         isTracking = true
         
         // 自动开始行程
-        serviceScope.launch {
+        lifecycleScope.launch {
             delay(2000) // 等待2秒让服务完全启动
             startTrip()
         }
@@ -166,7 +169,7 @@ class MainActivity : AppCompatActivity() {
         stopTrip()
         
         // 等待一小段时间让行程结束
-        serviceScope.launch {
+        lifecycleScope.launch {
             delay(1000)
             val intent = Intent(this@MainActivity, GpsTrackingService::class.java)
             stopService(intent)
@@ -227,14 +230,14 @@ class MainActivity : AppCompatActivity() {
                     bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
                 } catch (e: Exception) {
                     // 服务连接失败，显示默认状态
-                    updateStatusDisplay(null, false, 0, 0f, false, null, false)
+                    updateStatusDisplay(null, false, 0, 0f, false, null, false, null)
                 }
             } else {
-                updateStatusDisplay(null, false, 0, 0f, false, null, false)
+                updateStatusDisplay(null, false, 0, 0f, false, null, false, null)
             }
         } else {
             // 服务未运行
-            updateStatusDisplay(null, false, 0, 0f, false, null, false)
+            updateStatusDisplay(null, false, 0, 0f, false, null, false, null)
         }
     }
     
