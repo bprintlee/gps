@@ -66,9 +66,14 @@ class ExportActivity : AppCompatActivity() {
             exportAllFiles()
         }
         
-        // 添加从数据库导出按钮
+        // 按行程导出按钮
         binding.exportFromDatabaseButton.setOnClickListener {
             exportFromDatabase()
+        }
+        
+        // 查看行程按钮
+        binding.exportTripsButton.setOnClickListener {
+            showTripsDialog()
         }
         
         binding.refreshButton.setOnClickListener {
@@ -277,6 +282,71 @@ class ExportActivity : AppCompatActivity() {
             bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
         } catch (e: Exception) {
             Toast.makeText(this, "连接服务失败：${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun showTripsDialog() {
+        val serviceIntent = Intent(this, GpsTrackingService::class.java)
+        try {
+            val serviceConnection = object : android.content.ServiceConnection {
+                override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
+                    service?.let {
+                        val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
+                        val tripIds = gpsService.getAllTripIds()
+                        
+                        if (tripIds.isEmpty()) {
+                            Toast.makeText(this@ExportActivity, "暂无行程数据", Toast.LENGTH_SHORT).show()
+                        } else {
+                            showTripSelectionDialog(tripIds, gpsService)
+                        }
+                        unbindService(this)
+                    }
+                }
+                override fun onServiceDisconnected(name: android.content.ComponentName?) {}
+            }
+            bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+        } catch (e: Exception) {
+            Toast.makeText(this, "连接服务失败：${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun showTripSelectionDialog(tripIds: List<String>, gpsService: GpsTrackingService) {
+        val tripItems = tripIds.map { tripId ->
+            val gpsData = gpsService.getGpsDataByTripId(tripId)
+            val pointCount = gpsData.size
+            val startTime = if (gpsData.isNotEmpty()) {
+                SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(gpsData.first().timestamp))
+            } else "未知"
+            val endTime = if (gpsData.isNotEmpty()) {
+                SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(gpsData.last().timestamp))
+            } else "未知"
+            
+            "$tripId\n开始: $startTime, 结束: $endTime, 点数: $pointCount"
+        }.toTypedArray()
+        
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("选择要导出的行程")
+            .setItems(tripItems) { _, which ->
+                val selectedTripId = tripIds[which]
+                exportSingleTrip(selectedTripId, gpsService)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    private fun exportSingleTrip(tripId: String, gpsService: GpsTrackingService) {
+        lifecycleScope.launch {
+            try {
+                val result = gpsService.exportTripGpx(tripId)
+                if (result != null) {
+                    Toast.makeText(this@ExportActivity, "行程 $tripId 导出成功：$result", Toast.LENGTH_LONG).show()
+                    loadGpxFiles() // 刷新文件列表
+                } else {
+                    Toast.makeText(this@ExportActivity, "行程 $tripId 导出失败", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@ExportActivity, "导出失败：${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }

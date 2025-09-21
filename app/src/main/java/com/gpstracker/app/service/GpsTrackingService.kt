@@ -53,6 +53,10 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private var stepCount = 0
     private var lastAcceleration = 0f
     
+    // 行程管理
+    private var currentTripId: String? = null
+    private var isTripActive = false
+    
     // 数据收集
     private val gpsDataQueue = ConcurrentLinkedQueue<GpsData>()
     private val allGpsData = mutableListOf<GpsData>() // 累积所有GPS数据
@@ -190,6 +194,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private fun updateTrackingState() {
         val currentTime = System.currentTimeMillis()
         val gpsTimeout = (currentTime - lastGpsTime) > gpsTimeoutMs
+        val previousState = currentState
         
         when {
             gpsTimeout -> {
@@ -217,7 +222,45 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             }
         }
         
+        // 行程管理逻辑
+        manageTripState(previousState, currentState)
+        
         updateNotification()
+    }
+    
+    private fun manageTripState(previousState: TrackingState, newState: TrackingState) {
+        // 当从室内状态切换到室外/活跃/驾驶状态时，开始新行程
+        if (previousState == TrackingState.INDOOR && 
+            (newState == TrackingState.OUTDOOR || newState == TrackingState.ACTIVE || newState == TrackingState.DRIVING)) {
+            startNewTrip()
+        }
+        // 当从室外/活跃/驾驶状态切换到室内状态时，结束当前行程
+        else if ((previousState == TrackingState.OUTDOOR || previousState == TrackingState.ACTIVE || previousState == TrackingState.DRIVING) && 
+                 newState == TrackingState.INDOOR) {
+            endCurrentTrip()
+        }
+    }
+    
+    private fun startNewTrip() {
+        if (!isTripActive) {
+            currentTripId = generateTripId()
+            isTripActive = true
+            android.util.Log.d("GpsTrackingService", "开始新行程: $currentTripId")
+        }
+    }
+    
+    private fun endCurrentTrip() {
+        if (isTripActive && currentTripId != null) {
+            android.util.Log.d("GpsTrackingService", "结束行程: $currentTripId")
+            isTripActive = false
+            currentTripId = null
+        }
+    }
+    
+    private fun generateTripId(): String {
+        val timestamp = System.currentTimeMillis()
+        val dateFormat = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault())
+        return "trip_${dateFormat.format(java.util.Date(timestamp))}"
     }
     
     override fun onLocationChanged(location: Location) {
@@ -231,7 +274,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             altitude = location.altitude,
             accuracy = location.accuracy,
             timestamp = System.currentTimeMillis(),
-            state = currentState
+            state = currentState,
+            tripId = currentTripId
         )
         
         // 添加到队列和累积列表
@@ -409,6 +453,12 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     fun isPowerSaveMode(): Boolean = isPowerSaveMode
     fun getLastLocation(): Location? = lastLocation
     fun getGpxDirectoryPath(): String = gpxExporter.getGpxDirectoryPath().absolutePath
+    
+    // 行程管理相关方法
+    fun getCurrentTripId(): String? = currentTripId
+    fun isTripActive(): Boolean = isTripActive
+    fun getAllTripIds(): List<String> = gpsDatabase.getAllTripIds()
+    fun getGpsDataByTripId(tripId: String): List<GpsData> = gpsDatabase.getGpsDataByTripId(tripId)
     fun getGpsDataCount(): Int {
         return try {
             gpsDatabase.getGpsDataCount()
@@ -420,12 +470,22 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     suspend fun getGpxFileInfo(): Map<String, Any> = gpxExporter.getGpxFileInfo()
     
-    // 从数据库导出GPX文件
+    // 从数据库导出GPX文件（按行程分组）
     suspend fun exportGpxFromDatabase(fileName: String? = null): String? {
         return try {
             gpxExporter.exportFromDatabase(gpsDatabase, fileName)
         } catch (e: Exception) {
             android.util.Log.e("GpsTrackingService", "从数据库导出GPX文件失败", e)
+            null
+        }
+    }
+    
+    // 导出特定行程的GPX文件
+    suspend fun exportTripGpx(tripId: String, fileName: String? = null): String? {
+        return try {
+            gpxExporter.exportTripGpx(gpsDatabase, tripId, fileName)
+        } catch (e: Exception) {
+            android.util.Log.e("GpsTrackingService", "导出行程 $tripId 的GPX文件失败", e)
             null
         }
     }

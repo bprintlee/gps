@@ -6,7 +6,8 @@ data class GpsData(
     val altitude: Double,
     val accuracy: Float,
     val timestamp: Long,
-    val state: TrackingState
+    val state: TrackingState,
+    val tripId: String? = null  // 行程ID，用于分组GPS数据
 )
 
 enum class TrackingState {

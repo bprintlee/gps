@@ -199,7 +199,9 @@ class MainActivity : AppCompatActivity() {
                                     gpsService.isGpsAvailable(),
                                     gpsService.getStepCount(),
                                     gpsService.getLastAcceleration(),
-                                    gpsService.isPowerSaveMode()
+                                    gpsService.isPowerSaveMode(),
+                                    gpsService.getCurrentTripId(),
+                                    gpsService.isTripActive()
                                 )
                                 unbindService(this)
                             }
@@ -209,14 +211,14 @@ class MainActivity : AppCompatActivity() {
                     bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
                 } catch (e: Exception) {
                     // 服务连接失败，显示默认状态
-                    updateStatusDisplay(null, false, 0, 0f, false)
+                    updateStatusDisplay(null, false, 0, 0f, false, null, false)
                 }
             } else {
-                updateStatusDisplay(null, false, 0, 0f, false)
+                updateStatusDisplay(null, false, 0, 0f, false, null, false)
             }
         } else {
             // 服务未运行
-            updateStatusDisplay(null, false, 0, 0f, false)
+            updateStatusDisplay(null, false, 0, 0f, false, null, false)
         }
     }
     
@@ -226,7 +228,7 @@ class MainActivity : AppCompatActivity() {
         return runningServices.any { it.service.className == GpsTrackingService::class.java.name }
     }
     
-    private fun updateStatusDisplay(currentState: TrackingState?, gpsAvailable: Boolean, stepCount: Int, acceleration: Float, isPowerSave: Boolean) {
+    private fun updateStatusDisplay(currentState: TrackingState?, gpsAvailable: Boolean, stepCount: Int, acceleration: Float, isPowerSave: Boolean, currentTripId: String?, isTripActive: Boolean) {
         // 更新GPS状态
         binding.gpsStatusText.text = if (gpsAvailable) "有信号" else "无信号"
         binding.gpsStatusText.setTextColor(
@@ -273,6 +275,9 @@ class MainActivity : AppCompatActivity() {
         
         // 更新最后位置信息
         updateLastLocationInfo()
+        
+        // 更新行程信息
+        updateTripInfo(currentTripId, isTripActive)
     }
     
     private fun updateLastLocationInfo() {
@@ -363,6 +368,44 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             binding.savedPointsText.text = "0"
+        }
+    }
+    
+    private fun updateTripInfo(currentTripId: String?, isTripActive: Boolean) {
+        // 更新当前行程显示
+        if (isTripActive && currentTripId != null) {
+            binding.currentTripText.text = currentTripId
+            binding.currentTripText.setTextColor(
+                ContextCompat.getColor(this, android.R.color.holo_green_dark)
+            )
+        } else {
+            binding.currentTripText.text = "无"
+            binding.currentTripText.setTextColor(
+                ContextCompat.getColor(this, android.R.color.darker_gray)
+            )
+        }
+        
+        // 更新总行程数
+        if (isTracking) {
+            val serviceIntent = Intent(this, GpsTrackingService::class.java)
+            try {
+                val serviceConnection = object : android.content.ServiceConnection {
+                    override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
+                        service?.let {
+                            val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
+                            val totalTrips = gpsService.getAllTripIds().size
+                            binding.totalTripsText.text = totalTrips.toString()
+                            unbindService(this)
+                        }
+                    }
+                    override fun onServiceDisconnected(name: android.content.ComponentName?) {}
+                }
+                bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+            } catch (e: Exception) {
+                binding.totalTripsText.text = "0"
+            }
+        } else {
+            binding.totalTripsText.text = "0"
         }
     }
     

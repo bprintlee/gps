@@ -251,22 +251,103 @@ class GpxExporter(private val context: Context) {
         }
     }
     
-    // 从SQLite数据库导出GPX文件
+    // 从SQLite数据库导出GPX文件（按行程分组）
     suspend fun exportFromDatabase(gpsDatabase: GpsDatabase, fileName: String? = null): String? = withContext(Dispatchers.IO) {
         try {
-            val gpsDataList = gpsDatabase.getAllGpsData()
-            if (gpsDataList.isEmpty()) {
-                Log.w("GpxExporter", "数据库中没有GPS数据")
+            val tripIds = gpsDatabase.getAllTripIds()
+            if (tripIds.isEmpty()) {
+                Log.w("GpxExporter", "数据库中没有行程数据")
                 return@withContext null
             }
             
-            val gpxFileName = fileName ?: "gps_track_${dateFormat.format(Date())}.gpx"
+            // 为每个行程创建单独的GPX文件
+            val exportedFiles = mutableListOf<String>()
+            
+            for (tripId in tripIds) {
+                val gpsDataList = gpsDatabase.getGpsDataByTripId(tripId)
+                if (gpsDataList.isNotEmpty()) {
+                    val gpxFileName = fileName ?: "${tripId}.gpx"
+                    val gpxFile = File(getGpxDirectory(), gpxFileName)
+                    
+                    // 创建GPX文件
+                    createNewGpxFileForTrip(gpxFile, tripId, gpsDataList)
+                    
+                    // 写入GPS数据
+                    val writer = FileWriter(gpxFile, true)
+                    writer.use {
+                        gpsDataList.forEach { data ->
+                            val timeStr = timeFormat.format(Date(data.timestamp))
+                            val stateStr = getStateString(data.state)
+                            
+                            it.write("""      <trkpt lat="${data.latitude}" lon="${data.longitude}">
+        <ele>${data.altitude}</ele>
+        <time>$timeStr</time>
+        <extensions>
+          <accuracy>${data.accuracy}</accuracy>
+          <state>$stateStr</state>
+        </extensions>
+      </trkpt>
+""")
+                        }
+                        
+                        // 写入结束标签
+                        it.write("    </trkseg>\n")
+                        it.write("  </trk>\n")
+                        it.write("</gpx>\n")
+                    }
+                    
+                    exportedFiles.add(gpxFile.absolutePath)
+                    Log.d("GpxExporter", "导出行程 $tripId 的GPX文件成功: ${gpxFile.absolutePath}, 包含 ${gpsDataList.size} 个GPS点")
+                }
+            }
+            
+            Log.d("GpxExporter", "从数据库导出 ${exportedFiles.size} 个行程的GPX文件")
+            return@withContext if (exportedFiles.isNotEmpty()) exportedFiles.first() else null
+            
+        } catch (e: Exception) {
+            Log.e("GpxExporter", "从数据库导出GPX文件失败", e)
+            null
+        }
+    }
+    
+    // 为特定行程创建GPX文件
+    private fun createNewGpxFileForTrip(gpxFile: File, tripId: String, gpsDataList: List<GpsData>) {
+        val writer = FileWriter(gpxFile)
+        writer.use {
+            val startTime = if (gpsDataList.isNotEmpty()) timeFormat.format(Date(gpsDataList.first().timestamp)) else timeFormat.format(Date())
+            val endTime = if (gpsDataList.isNotEmpty()) timeFormat.format(Date(gpsDataList.last().timestamp)) else timeFormat.format(Date())
+            
+            it.write("""<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="GPS Tracker App">
+  <metadata>
+    <name>行程: $tripId</name>
+    <desc>GPS位置跟踪数据 - 行程ID: $tripId</desc>
+    <time>$startTime</time>
+  </metadata>
+  <trk>
+    <name>$tripId</name>
+    <desc>行程轨迹 - 开始时间: $startTime, 结束时间: $endTime</desc>
+    <trkseg>
+""")
+        }
+    }
+    
+    // 导出特定行程的GPX文件
+    suspend fun exportTripGpx(gpsDatabase: GpsDatabase, tripId: String, fileName: String? = null): String? = withContext(Dispatchers.IO) {
+        try {
+            val gpsDataList = gpsDatabase.getGpsDataByTripId(tripId)
+            if (gpsDataList.isEmpty()) {
+                Log.w("GpxExporter", "行程 $tripId 没有GPS数据")
+                return@withContext null
+            }
+            
+            val gpxFileName = fileName ?: "${tripId}.gpx"
             val gpxFile = File(getGpxDirectory(), gpxFileName)
             
             // 创建GPX文件
-            createNewGpxFile(gpxFile)
+            createNewGpxFileForTrip(gpxFile, tripId, gpsDataList)
             
-            // 写入所有GPS数据
+            // 写入GPS数据
             val writer = FileWriter(gpxFile, true)
             writer.use {
                 gpsDataList.forEach { data ->
@@ -290,11 +371,11 @@ class GpxExporter(private val context: Context) {
                 it.write("</gpx>\n")
             }
             
-            Log.d("GpxExporter", "从数据库导出GPX文件成功: ${gpxFile.absolutePath}, 包含 ${gpsDataList.size} 个GPS点")
+            Log.d("GpxExporter", "导出行程 $tripId 的GPX文件成功: ${gpxFile.absolutePath}, 包含 ${gpsDataList.size} 个GPS点")
             gpxFile.absolutePath
             
         } catch (e: Exception) {
-            Log.e("GpxExporter", "从数据库导出GPX文件失败", e)
+            Log.e("GpxExporter", "导出行程 $tripId 的GPX文件失败", e)
             null
         }
     }
