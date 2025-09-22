@@ -188,7 +188,7 @@ class Android15MqttWorkaround(private val context: Context) {
             state.appendLine("客户端ID: $clientId")
             state.appendLine("主题: $topic")
             state.appendLine("最后错误: ${lastError?.message ?: "无"}")
-            state.appendLine("最后错误类型: ${lastError?.javaClass.simpleName ?: "无"}")
+            state.appendLine("最后错误类型: ${lastError?.javaClass?.simpleName ?: "无"}")
             state.appendLine("网络可用: ${isNetworkAvailable()}")
             state.appendLine("兼容性: 使用纯Java MQTT客户端避免BroadcastReceiver问题")
             state.toString()
