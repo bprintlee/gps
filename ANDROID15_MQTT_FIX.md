@@ -26,7 +26,22 @@ android {
 }
 ```
 
-### 2. 保持MQTT服务声明
+### 2. 使用兼容Android 15的MQTT库
+
+**文件**: `app/build.gradle`
+```gradle
+repositories {
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    // 使用兼容Android 15的社区版本MQTT库
+    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5'
+    implementation 'com.github.hannesa2:paho.mqtt.android:4.2.3'
+}
+```
+
+### 3. 保持MQTT服务声明
 
 **文件**: `app/src/main/AndroidManifest.xml`
 ```xml
@@ -37,46 +52,43 @@ android {
     android:exported="false" />
 ```
 
-### 3. 在MqttManager中添加Android 15兼容性处理
+### 4. 恢复完整的MQTT功能
 
 **文件**: `app/src/main/java/com/gpstracker/app/utils/MqttManager.kt`
+
+使用新的兼容库后，MqttManager可以正常工作，无需特殊的Android 15兼容性处理：
 
 ```kotlin
 fun connect() {
     try {
-        // Android 15兼容性处理
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            Log.d("MqttManager", "检测到Android 15，使用兼容性处理")
-            connectWithAndroid15Compatibility()
+        // 检查网络连接
+        if (!isNetworkAvailable()) {
+            Log.w("MqttManager", "网络不可用，跳过MQTT连接")
             return
         }
-        // 正常的连接流程...
+        
+        // 正常的MQTT连接流程
+        mqttClient = MqttAndroidClient(context, serverUri, clientId)
+        
+        val options = MqttConnectOptions().apply {
+            isCleanSession = true
+            isAutomaticReconnect = true // 可以正常使用自动重连
+            connectionTimeout = 10
+            keepAliveInterval = 60
+            mqttVersion = MqttConnectOptions.MQTT_VERSION_3_1_1
+        }
+        
+        // 正常的回调处理
+        mqttClient?.setCallback(object : MqttCallback {
+            override fun connectionLost(cause: Throwable?) {
+                Log.w("MqttManager", "连接丢失", cause)
+                // 自动重连会处理连接丢失
+            }
+            // 其他回调方法...
+        })
     } catch (e: Exception) {
         // 错误处理...
     }
-}
-
-private fun connectWithAndroid15Compatibility() {
-    // 创建简化的MQTT客户端，禁用自动重连
-    mqttClient = MqttAndroidClient(context, serverUri, clientId)
-    
-    val options = MqttConnectOptions().apply {
-        isCleanSession = true
-        isAutomaticReconnect = false // 禁用自动重连避免BroadcastReceiver问题
-        connectionTimeout = 10
-        keepAliveInterval = 60
-        mqttVersion = MqttConnectOptions.MQTT_VERSION_3_1_1
-    }
-    
-    // 简化的回调，不处理连接丢失重连
-    mqttClient?.setCallback(object : MqttCallback {
-        override fun connectionLost(cause: Throwable?) {
-            Log.w("MqttManager", "Android 15兼容模式：连接丢失", cause)
-            isConnecting = false
-            lastConnectionState = "连接丢失"
-        }
-        // 其他回调方法...
-    })
 }
 ```
 
@@ -93,14 +105,15 @@ Android 15要求所有BroadcastReceiver注册时必须明确指定导出状态�
 
 Eclipse Paho MQTT库在Android 15上存在兼容性问题，特别是：
 - `AlarmPingSender`类注册BroadcastReceiver时未指定导出标志
-- 需要自定义包装器来处理版本兼容性
+- 官方库未及时更新以支持Android 15的新安全要求
 
 ### 解决方案优势
 
-1. **向后兼容**: 支持Android 12及以下版本
-2. **向前兼容**: 支持Android 15的新安全要求
-3. **最小侵入**: 只修改必要的代码，不影响其他功能
-4. **错误处理**: 包含异常处理，避免应用崩溃
+1. **使用社区维护的兼容库**: `hannesa2/paho.mqtt.android`已针对Android 14+进行适配
+2. **完整功能支持**: 保持所有MQTT功能，包括自动重连、心跳等
+3. **向后兼容**: 支持所有Android版本
+4. **向前兼容**: 支持Android 15的新安全要求
+5. **最小侵入**: 只需更换依赖库，无需修改业务逻辑
 
 ## 测试验证
 
@@ -112,9 +125,9 @@ Eclipse Paho MQTT库在Android 15上存在兼容性问题，特别是：
 
 ## 相关文件
 
-- `app/build.gradle` - 更新SDK版本
+- `app/build.gradle` - 更新SDK版本和MQTT依赖库
 - `app/src/main/AndroidManifest.xml` - 保持MQTT服务声明
-- `app/src/main/java/com/gpstracker/app/utils/MqttManager.kt` - 添加Android 15兼容性处理
+- `app/src/main/java/com/gpstracker/app/utils/MqttManager.kt` - 恢复完整MQTT功能
 
 ## 注意事项
 
