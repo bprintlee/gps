@@ -160,6 +160,7 @@ class GpxExporter(private val context: Context) {
             TrackingState.OUTDOOR -> "室外"
             TrackingState.ACTIVE -> "活跃"
             TrackingState.DRIVING -> "驾驶"
+            TrackingState.DEEP_STATIONARY -> "深度静止"
         }
     }
     

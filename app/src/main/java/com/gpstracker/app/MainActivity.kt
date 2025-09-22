@@ -295,6 +295,7 @@ class MainActivity : AppCompatActivity() {
             TrackingState.OUTDOOR -> "室外模式"
             TrackingState.ACTIVE -> "活跃状态"
             TrackingState.DRIVING -> "驾驶状态"
+            TrackingState.DEEP_STATIONARY -> "深度静止模式"
             null -> if (isTracking) "跟踪中..." else "已停止"
         }
         
@@ -306,6 +307,7 @@ class MainActivity : AppCompatActivity() {
             TrackingState.OUTDOOR -> android.R.color.holo_blue_dark
             TrackingState.ACTIVE -> android.R.color.holo_green_dark
             TrackingState.DRIVING -> android.R.color.holo_purple
+            TrackingState.DEEP_STATIONARY -> android.R.color.holo_red_dark
             null -> android.R.color.darker_gray
         }
         
