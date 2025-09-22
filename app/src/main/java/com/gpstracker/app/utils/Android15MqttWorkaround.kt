@@ -36,6 +36,13 @@ class Android15MqttWorkaround(private val context: Context) {
     private var lastError: Throwable? = null
     private var connectionAttempts = 0
     
+    // 自动重连配置
+    private var isAutoReconnectEnabled = true
+    private var reconnectAttempts = 0
+    private val maxReconnectAttempts = 10
+    private val reconnectDelayMs = 5000L // 5秒重连延迟
+    private var reconnectJob: Job? = null
+    
     fun connect() {
         Log.d(TAG, "=== 开始Android 15兼容的MQTT连接 ===")
         Log.d(TAG, "服务器URI: $serverUri")
@@ -86,7 +93,13 @@ class Android15MqttWorkaround(private val context: Context) {
                     Log.w(TAG, "连接丢失", cause)
                     isConnecting = false
                     lastConnectionState = "连接丢失"
+                    lastError = cause
                     logManager.saveLog(TAG, "WARN", "MQTT连接丢失: ${cause?.message}")
+                    
+                    // 启动自动重连
+                    if (isAutoReconnectEnabled) {
+                        startAutoReconnect()
+                    }
                 }
                 
                 override fun messageArrived(topic: String?, message: MqttMessage?) {
@@ -108,6 +121,10 @@ class Android15MqttWorkaround(private val context: Context) {
             lastConnectionState = "已连接"
             lastError = null
             isConnecting = false
+            
+            // 连接成功，重置重连计数器
+            resetReconnectAttempts()
+            
             logManager.saveLog(TAG, "INFO", "MQTT连接成功")
             
         } catch (e: Exception) {
@@ -190,6 +207,8 @@ class Android15MqttWorkaround(private val context: Context) {
             state.appendLine("最后错误: ${lastError?.message ?: "无"}")
             state.appendLine("最后错误类型: ${lastError?.javaClass?.simpleName ?: "无"}")
             state.appendLine("网络可用: ${isNetworkAvailable()}")
+            state.appendLine("自动重连: ${if (isAutoReconnectEnabled) "已启用" else "已禁用"}")
+            state.appendLine("重连次数: $reconnectAttempts/$maxReconnectAttempts")
             state.appendLine("兼容性: 使用纯Java MQTT客户端避免BroadcastReceiver问题")
             state.toString()
         } catch (e: Exception) {
@@ -260,13 +279,93 @@ class Android15MqttWorkaround(private val context: Context) {
         }
     }
     
-    private fun disconnect() {
+    private     fun disconnect() {
         try {
+            // 停止自动重连
+            stopAutoReconnect()
+            
             mqttClient?.disconnect()
             Log.d(TAG, "MQTT已断开连接")
             lastConnectionState = "已断开"
         } catch (e: Exception) {
             Log.e(TAG, "MQTT断开连接异常", e)
+        }
+    }
+    
+    /**
+     * 启动自动重连
+     */
+    private fun startAutoReconnect() {
+        if (reconnectJob?.isActive == true) {
+            Log.d(TAG, "自动重连已在进行中，跳过")
+            return
+        }
+        
+        if (reconnectAttempts >= maxReconnectAttempts) {
+            Log.w(TAG, "已达到最大重连次数 ($maxReconnectAttempts)，停止自动重连")
+            logManager.saveLog(TAG, "WARN", "已达到最大重连次数，停止自动重连")
+            return
+        }
+        
+        reconnectAttempts++
+        Log.d(TAG, "启动自动重连 (第 $reconnectAttempts/$maxReconnectAttempts 次)")
+        logManager.saveLog(TAG, "INFO", "启动自动重连 (第 $reconnectAttempts/$maxReconnectAttempts 次)")
+        
+        reconnectJob = serviceScope.launch {
+            try {
+                delay(reconnectDelayMs)
+                
+                if (isNetworkAvailable()) {
+                    Log.d(TAG, "网络可用，尝试重连...")
+                    connect(serverUri, clientId, topic)
+                } else {
+                    Log.w(TAG, "网络不可用，延迟重连")
+                    // 网络不可用时，延长重连间隔
+                    delay(reconnectDelayMs * 2)
+                    startAutoReconnect()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "自动重连异常", e)
+                logManager.saveLog(TAG, "ERROR", "自动重连异常: ${e.message}")
+                
+                // 重连失败，继续尝试
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    delay(reconnectDelayMs * 2)
+                    startAutoReconnect()
+                }
+            }
+        }
+    }
+    
+    /**
+     * 停止自动重连
+     */
+    private fun stopAutoReconnect() {
+        reconnectJob?.cancel()
+        reconnectJob = null
+        reconnectAttempts = 0
+        Log.d(TAG, "已停止自动重连")
+    }
+    
+    /**
+     * 重置重连计数器（连接成功时调用）
+     */
+    private fun resetReconnectAttempts() {
+        reconnectAttempts = 0
+        reconnectJob?.cancel()
+        reconnectJob = null
+        Log.d(TAG, "连接成功，重置重连计数器")
+    }
+    
+    /**
+     * 设置自动重连开关
+     */
+    fun setAutoReconnectEnabled(enabled: Boolean) {
+        isAutoReconnectEnabled = enabled
+        Log.d(TAG, "自动重连已${if (enabled) "启用" else "禁用"}")
+        
+        if (!enabled) {
+            stopAutoReconnect()
         }
     }
     
