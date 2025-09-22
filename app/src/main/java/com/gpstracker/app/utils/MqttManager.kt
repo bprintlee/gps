@@ -9,7 +9,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import com.gpstracker.app.model.GpsData
 import kotlinx.coroutines.*
-import org.eclipse.paho.android.service.MqttAndroidClient
+import info.mqtt.android.service.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.*
 import java.util.*
 
@@ -81,7 +81,7 @@ class MqttManager(private val context: Context) {
             Log.d("MqttManager", "服务器URI: $serverUri")
             Log.d("MqttManager", "客户端ID: $clientId")
             
-            mqttClient = MqttAndroidClient(context, serverUri, clientId)
+            mqttClient = MqttAndroidClient(context, serverUri, clientId, info.mqtt.android.service.Ack.AUTO_ACK)
             Log.d("MqttManager", "MQTT客户端创建成功")
             
             val options = MqttConnectOptions().apply {

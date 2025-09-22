@@ -8,7 +8,7 @@ import android.os.Build
 import android.util.Log
 import com.gpstracker.app.model.GpsData
 import kotlinx.coroutines.*
-import org.eclipse.paho.android.service.MqttAndroidClient
+import info.mqtt.android.service.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.*
 import java.util.*
 
@@ -71,8 +71,8 @@ class Android15CompatibleMqttManager(private val context: Context) {
             Log.d("Android15CompatibleMqttManager", "服务器URI: $serverUri")
             Log.d("Android15CompatibleMqttManager", "客户端ID: $clientId")
             
-            // 创建MQTT客户端
-            mqttClient = MqttAndroidClient(context, serverUri, clientId)
+            // 创建MQTT客户端 - 使用兼容Android 15的版本
+            mqttClient = MqttAndroidClient(context, serverUri, clientId, info.mqtt.android.service.Ack.AUTO_ACK)
             
             val options = MqttConnectOptions().apply {
                 isCleanSession = true

@@ -86,9 +86,9 @@
             tools:targetApi="29"
             android:foregroundServiceType="location" />
         
-        <!-- MQTT服务 -->
+        <!-- MQTT服务 - 使用兼容Android 15的版本 -->
         <service
-            android:name="org.eclipse.paho.android.service.MqttService"
+            android:name="info.mqtt.android.service.MqttService"
             android:enabled="true"
             android:exported="false" />
             
