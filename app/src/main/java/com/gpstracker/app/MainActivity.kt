@@ -123,7 +123,7 @@ class MainActivity : AppCompatActivity() {
         }
         
         binding.debugButton.setOnClickListener {
-            DebugActivity.start(this)
+            SimpleDebugActivity.start(this)
         }
     }
     

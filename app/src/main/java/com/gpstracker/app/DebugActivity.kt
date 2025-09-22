@@ -37,25 +37,32 @@ class DebugActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        binding = ActivityDebugBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        
-        // 设置工具栏
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "调试信息"
-        
-        // 初始化崩溃处理器
-        crashHandler = CrashHandler(this)
-        
-        // 设置滚动
-        binding.logContentText.movementMethod = ScrollingMovementMethod()
-        
-        // 加载崩溃日志列表
-        loadCrashLogs()
-        
-        // 设置点击事件
-        setupClickListeners()
+        try {
+            binding = ActivityDebugBinding.inflate(layoutInflater)
+            setContentView(binding.root)
+            
+            // 设置工具栏
+            setSupportActionBar(binding.toolbar)
+            supportActionBar?.setDisplayHomeAsUpEnabled(true)
+            supportActionBar?.title = "调试信息"
+            
+            // 初始化崩溃处理器
+            crashHandler = CrashHandler(this)
+            
+            // 设置滚动
+            binding.logContentText.movementMethod = ScrollingMovementMethod()
+            
+            // 加载崩溃日志列表
+            loadCrashLogs()
+            
+            // 设置点击事件
+            setupClickListeners()
+            
+        } catch (e: Exception) {
+            android.util.Log.e("DebugActivity", "onCreate failed", e)
+            Toast.makeText(this, "调试页面初始化失败: ${e.message}", Toast.LENGTH_LONG).show()
+            finish()
+        }
     }
     
     private fun setupClickListeners() {
@@ -80,12 +87,17 @@ class DebugActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val crashLogs = withContext(Dispatchers.IO) {
-                    crashHandler.getCrashLogs().sortedByDescending { it.lastModified() }
+                    try {
+                        crashHandler.getCrashLogs().sortedByDescending { it.lastModified() }
+                    } catch (e: Exception) {
+                        android.util.Log.e("DebugActivity", "获取崩溃日志失败", e)
+                        emptyList<File>()
+                    }
                 }
                 
                 if (crashLogs.isEmpty()) {
                     binding.logListText.text = "暂无崩溃日志"
-                    binding.logContentText.text = "没有找到崩溃日志文件"
+                    binding.logContentText.text = "没有找到崩溃日志文件\n\n提示：当应用发生崩溃时，会自动生成崩溃日志文件。"
                     currentLogFile = null
                 } else {
                     // 显示日志文件列表
@@ -93,13 +105,18 @@ class DebugActivity : AppCompatActivity() {
                         appendLine("找到 ${crashLogs.size} 个崩溃日志文件：")
                         appendLine()
                         crashLogs.forEachIndexed { index, file ->
-                            val date = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                                .format(Date(file.lastModified()))
-                            val size = formatFileSize(file.length())
-                            appendLine("${index + 1}. ${file.name}")
-                            appendLine("   时间: $date")
-                            appendLine("   大小: $size")
-                            appendLine()
+                            try {
+                                val date = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                                    .format(Date(file.lastModified()))
+                                val size = formatFileSize(file.length())
+                                appendLine("${index + 1}. ${file.name}")
+                                appendLine("   时间: $date")
+                                appendLine("   大小: $size")
+                                appendLine()
+                            } catch (e: Exception) {
+                                appendLine("${index + 1}. ${file.name} (信息获取失败)")
+                                appendLine()
+                            }
                         }
                     }
                     binding.logListText.text = logListText
@@ -110,8 +127,9 @@ class DebugActivity : AppCompatActivity() {
                 }
                 
             } catch (e: Exception) {
+                android.util.Log.e("DebugActivity", "loadCrashLogs failed", e)
                 binding.logListText.text = "加载日志列表失败: ${e.message}"
-                binding.logContentText.text = "错误: ${e.message}"
+                binding.logContentText.text = "错误: ${e.message}\n\n请检查应用权限或重启应用。"
             }
         }
     }
@@ -120,7 +138,16 @@ class DebugActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val content = withContext(Dispatchers.IO) {
-                    logFile.readText()
+                    try {
+                        if (logFile.exists() && logFile.canRead()) {
+                            logFile.readText()
+                        } else {
+                            "文件不存在或无法读取"
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("DebugActivity", "读取日志文件失败", e)
+                        "读取文件失败: ${e.message}"
+                    }
                 }
                 binding.logContentText.text = content
                 
@@ -128,6 +155,7 @@ class DebugActivity : AppCompatActivity() {
                 supportActionBar?.subtitle = logFile.name
                 
             } catch (e: Exception) {
+                android.util.Log.e("DebugActivity", "loadLogContent failed", e)
                 binding.logContentText.text = "读取日志文件失败: ${e.message}"
             }
         }

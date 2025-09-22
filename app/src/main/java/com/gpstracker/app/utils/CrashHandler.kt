@@ -24,7 +24,8 @@ class CrashHandler(private val context: Context) : Thread.UncaughtExceptionHandl
     }
     
     init {
-        Thread.setDefaultUncaughtExceptionHandler(this)
+        // 只在需要时设置全局异常处理器
+        // Thread.setDefaultUncaughtExceptionHandler(this)
     }
     
     override fun uncaughtException(thread: Thread, exception: Throwable) {
