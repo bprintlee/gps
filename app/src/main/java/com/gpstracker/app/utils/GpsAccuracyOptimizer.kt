@@ -89,11 +89,11 @@ class GpsAccuracyOptimizer(private val context: Context) {
             )
             
             AccuracyMode.INDOOR_NAVIGATION -> AccuracyConfig(
-                priority = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY,
-                interval = 8000L, // 8秒
-                fastestInterval = 4000L, // 4秒
-                smallestDisplacement = 3f, // 3米
-                maxWaitTime = 15000L, // 15秒
+                priority = LocationRequest.PRIORITY_LOW_POWER, // 室内模式使用低功耗
+                interval = 15000L, // 15秒 - 降低更新频率
+                fastestInterval = 10000L, // 10秒
+                smallestDisplacement = 10f, // 10米 - 降低精度要求
+                maxWaitTime = 30000L, // 30秒
                 enableBatching = true,
                 enableBackgroundLocation = false
             )
@@ -160,6 +160,36 @@ class GpsAccuracyOptimizer(private val context: Context) {
     }
     
     /**
+     * 根据精度模式获取位置提供者
+     */
+    fun getLocationProviderForMode(mode: AccuracyMode): String {
+        return when (mode) {
+            AccuracyMode.INDOOR_NAVIGATION -> {
+                // 室内模式：只使用网络定位，不使用GPS
+                if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                    LocationManager.NETWORK_PROVIDER
+                } else if (locationManager.isProviderEnabled(LocationManager.PASSIVE_PROVIDER)) {
+                    LocationManager.PASSIVE_PROVIDER
+                } else {
+                    LocationManager.GPS_PROVIDER // 回退到GPS
+                }
+            }
+            AccuracyMode.POWER_SAVE -> {
+                // 省电模式：优先使用网络定位
+                if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                    LocationManager.NETWORK_PROVIDER
+                } else {
+                    LocationManager.GPS_PROVIDER
+                }
+            }
+            else -> {
+                // 其他模式：使用最佳提供者
+                getBestLocationProvider()
+            }
+        }
+    }
+    
+    /**
      * 验证位置精度
      */
     fun validateLocationAccuracy(location: Location): LocationAccuracy {
@@ -219,6 +249,8 @@ class GpsAccuracyOptimizer(private val context: Context) {
         tips.add("避免在高楼密集区域使用GPS")
         tips.add("确保设备有良好的天空视野")
         tips.add("定期校准GPS以提高精度")
+        tips.add("室内环境建议使用网络定位以节省电量")
+        tips.add("室内模式下GPS信号弱且耗电，建议禁用")
         
         return tips
     }

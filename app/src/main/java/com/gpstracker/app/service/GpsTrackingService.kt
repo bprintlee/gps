@@ -180,12 +180,17 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             }
             
             val config = gpsAccuracyOptimizer.getAccuracyConfig(accuracyMode)
-            val bestProvider = gpsAccuracyOptimizer.getBestLocationProvider()
+            val bestProvider = gpsAccuracyOptimizer.getLocationProviderForMode(accuracyMode)
             
             android.util.Log.d("GpsTrackingService", "使用精度模式: $accuracyMode")
-            android.util.Log.d("GpsTrackingService", "最佳位置提供者: $bestProvider")
+            android.util.Log.d("GpsTrackingService", "位置提供者: $bestProvider")
             android.util.Log.d("GpsTrackingService", "更新间隔: ${config.interval}ms")
             android.util.Log.d("GpsTrackingService", "最小位移: ${config.smallestDisplacement}m")
+            
+            // 室内模式特殊提示
+            if (accuracyMode == GpsAccuracyOptimizer.AccuracyMode.INDOOR_NAVIGATION) {
+                android.util.Log.d("GpsTrackingService", "室内模式：禁用GPS，仅使用网络定位以节省电量")
+            }
             
             locationManager.requestLocationUpdates(
                 bestProvider,
