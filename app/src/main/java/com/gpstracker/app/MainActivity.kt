@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import com.gpstracker.app.databinding.ActivityMainBinding
 import com.gpstracker.app.service.GpsTrackingService
 import com.gpstracker.app.model.TrackingState
+import com.gpstracker.app.utils.EnhancedCrashHandler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
@@ -24,6 +25,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var isTracking = false
     private val serviceScope = CoroutineScope(Dispatchers.Main)
+    private lateinit var crashHandler: EnhancedCrashHandler
     
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -43,11 +45,16 @@ class MainActivity : AppCompatActivity() {
             binding = ActivityMainBinding.inflate(layoutInflater)
             setContentView(binding.root)
             
+            // 初始化增强版崩溃处理器
+            crashHandler = EnhancedCrashHandler.getInstance(this)
+            crashHandler.logAppState("MainActivity onCreate")
+            
             setupClickListeners()
             updateUI()
             startStatusMonitoring()
         } catch (e: Exception) {
             android.util.Log.e("MainActivity", "onCreate failed", e)
+            crashHandler.logError("MainActivity onCreate failed", e)
             // 如果初始化失败，显示错误信息
             Toast.makeText(this, "应用初始化失败，请重启应用", Toast.LENGTH_LONG).show()
         }
@@ -155,22 +162,30 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun startTracking() {
-        val intent = Intent(this, GpsTrackingService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
+        try {
+            crashHandler.logAppState("Starting GPS tracking")
+            
+            val intent = Intent(this, GpsTrackingService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+            isTracking = true
+            
+            // 自动开始行程
+            lifecycleScope.launch {
+                delay(2000) // 等待2秒让服务完全启动
+                startTrip()
+            }
+            
+            updateUI()
+            crashHandler.logAppState("GPS tracking started successfully")
+            Toast.makeText(this, "开始GPS跟踪和行程", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            crashHandler.logError("Failed to start GPS tracking", e)
+            Toast.makeText(this, "启动GPS跟踪失败: ${e.message}", Toast.LENGTH_SHORT).show()
         }
-        isTracking = true
-        
-        // 自动开始行程
-        lifecycleScope.launch {
-            delay(2000) // 等待2秒让服务完全启动
-            startTrip()
-        }
-        
-        updateUI()
-        Toast.makeText(this, "开始GPS跟踪和行程", Toast.LENGTH_SHORT).show()
     }
     
     private fun stopTracking() {

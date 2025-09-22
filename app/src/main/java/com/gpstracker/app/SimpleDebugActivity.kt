@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.gpstracker.app.databinding.ActivitySimpleDebugBinding
+import com.gpstracker.app.utils.EnhancedCrashHandler
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -16,6 +17,7 @@ import java.util.*
 class SimpleDebugActivity : AppCompatActivity() {
     
     private lateinit var binding: ActivitySimpleDebugBinding
+    private lateinit var crashHandler: EnhancedCrashHandler
     
     companion object {
         fun start(context: Context) {
@@ -35,6 +37,9 @@ class SimpleDebugActivity : AppCompatActivity() {
             supportActionBar?.setDisplayHomeAsUpEnabled(true)
             supportActionBar?.title = "调试信息"
             
+            // 初始化增强版崩溃处理器
+            crashHandler = EnhancedCrashHandler.getInstance(this)
+            
             // 加载崩溃日志
             loadCrashLogs()
             
@@ -47,6 +52,14 @@ class SimpleDebugActivity : AppCompatActivity() {
                 createTestLog()
             }
             
+            binding.copyLogsButton.setOnClickListener {
+                copyLogsToClipboard()
+            }
+            
+            binding.viewRuntimeLogsButton.setOnClickListener {
+                viewRuntimeLogs()
+            }
+            
         } catch (e: Exception) {
             android.util.Log.e("SimpleDebugActivity", "onCreate failed", e)
             Toast.makeText(this, "调试页面初始化失败: ${e.message}", Toast.LENGTH_LONG).show()
@@ -56,12 +69,7 @@ class SimpleDebugActivity : AppCompatActivity() {
     
     private fun loadCrashLogs() {
         try {
-            val logDir = File(filesDir, "crash_logs")
-            val crashLogs = if (logDir.exists()) {
-                logDir.listFiles { file -> file.name.startsWith("crash_") }?.toList() ?: emptyList()
-            } else {
-                emptyList()
-            }
+            val crashLogs = crashHandler.getCrashLogs()
             
             if (crashLogs.isEmpty()) {
                 binding.logListText.text = "暂无崩溃日志"
@@ -181,6 +189,29 @@ class SimpleDebugActivity : AppCompatActivity() {
             bytes < 1024 -> "$bytes B"
             bytes < 1024 * 1024 -> "${bytes / 1024} KB"
             else -> "${bytes / (1024 * 1024)} MB"
+        }
+    }
+    
+    private fun copyLogsToClipboard() {
+        try {
+            crashHandler.copyLogsToClipboard()
+        } catch (e: Exception) {
+            android.util.Log.e("SimpleDebugActivity", "复制日志失败", e)
+            Toast.makeText(this, "复制日志失败: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun viewRuntimeLogs() {
+        try {
+            val runtimeLogs = crashHandler.getAllRuntimeLogs()
+            if (runtimeLogs.isNotEmpty()) {
+                binding.logContentText.text = "=== 运行时日志 ===\n\n$runtimeLogs"
+            } else {
+                binding.logContentText.text = "暂无运行时日志\n\n运行时日志会记录应用运行过程中的重要事件。"
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SimpleDebugActivity", "查看运行时日志失败", e)
+            binding.logContentText.text = "查看运行时日志失败: ${e.message}"
         }
     }
     
