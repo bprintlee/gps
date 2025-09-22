@@ -1,0 +1,30 @@
+// 本地签名配置文件
+// 这个文件用于确保本地构建使用一致的签名
+
+android {
+    signingConfigs {
+        debug {
+            // 使用项目目录下的debug keystore
+            storeFile file("debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+        release {
+            // 发布版本也使用相同的debug keystore（仅用于测试）
+            storeFile file("debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+    }
+    
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            signingConfig signingConfigs.release
+        }
+    }
+}
