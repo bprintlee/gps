@@ -135,13 +135,22 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         startSensorUpdates()
         startStateMonitoring()
         
-        // 启用MQTT功能
+        // 启用MQTT功能 - Android 15兼容性检查
         android.util.Log.d("GpsTrackingService", "=== 开始启动MQTT连接 ===")
+        android.util.Log.d("GpsTrackingService", "当前Android版本: ${Build.VERSION.SDK_INT}")
+        
         try {
             mqttManager?.let { manager ->
                 android.util.Log.d("GpsTrackingService", "MQTT管理器存在，开始连接...")
-                manager.connect()
-                android.util.Log.d("GpsTrackingService", "MQTT连接请求已发送")
+                
+                // Android 15兼容性检查
+                if (Build.VERSION.SDK_INT >= 35) {
+                    android.util.Log.w("GpsTrackingService", "检测到Android 15，跳过MQTT连接以避免兼容性问题")
+                    android.util.Log.w("GpsTrackingService", "GPS跟踪功能将继续正常工作")
+                } else {
+                    manager.connect()
+                    android.util.Log.d("GpsTrackingService", "MQTT连接请求已发送")
+                }
             } ?: run {
                 android.util.Log.e("GpsTrackingService", "MQTT管理器为null，无法连接")
             }
