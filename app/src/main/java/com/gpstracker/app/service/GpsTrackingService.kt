@@ -70,6 +70,18 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private val stepThreshold = 20 // 20步阈值
     private val accelerationThreshold = 2.0f // 加速度阈值
     
+    // 深度静止状态配置
+    private val deepStationaryTimeoutMs = 300000L // 5分钟无移动进入深度静止
+    private val deepStationaryStepThreshold = 30 // 30步阈值退出深度静止
+    private val deepStationaryAccelerationThreshold = 1.5f // 深度静止状态加速度阈值
+    private var lastMovementTime = 0L // 最后移动时间
+    private var initialStepCount = 0 // 进入深度静止时的步数
+    private var isInDeepStationary = false // 是否处于深度静止状态
+    
+    // 深度静止状态统计
+    private var deepStationaryEntryTime = 0L // 进入深度静止状态的时间
+    private var totalDeepStationaryTime = 0L // 累计深度静止时间
+    
     // 省电模式配置 - 默认开启省电模式
     private var isPowerSaveMode = true
     private var gpsUpdateInterval = 10000L // 默认10秒间隔（省电模式）
@@ -95,6 +107,11 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         
         try {
             android.util.Log.d("GpsTrackingService", "=== 开始创建GPS跟踪服务 ===")
+            
+            // 初始化深度静止状态相关变量
+            lastMovementTime = System.currentTimeMillis()
+            isInDeepStationary = false
+            initialStepCount = 0
             
             locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
             android.util.Log.d("GpsTrackingService", "位置管理器初始化完成")
@@ -239,8 +256,14 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     }
     
     private fun startSensorUpdates() {
-        // 根据省电模式调整传感器更新频率
-        val sensorDelay = if (isPowerSaveMode) SensorManager.SENSOR_DELAY_UI else SensorManager.SENSOR_DELAY_NORMAL
+        // 根据省电模式和深度静止状态调整传感器更新频率
+        val sensorDelay = when {
+            isInDeepStationary -> SensorManager.SENSOR_DELAY_NORMAL // 深度静止状态使用正常延迟
+            isPowerSaveMode -> SensorManager.SENSOR_DELAY_UI // 省电模式使用UI延迟
+            else -> SensorManager.SENSOR_DELAY_NORMAL // 正常模式使用正常延迟
+        }
+        
+        android.util.Log.d("GpsTrackingService", "启动传感器更新 - 延迟: $sensorDelay, 深度静止: $isInDeepStationary")
         
         accelerometer?.let {
             sensorManager.registerListener(this, it, sensorDelay)
@@ -254,7 +277,15 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         serviceScope.launch {
             while (isActive) {
                 updateTrackingState()
-                delay(stateCheckInterval) // 根据省电模式调整检查频率
+                
+                // 根据深度静止状态调整检查频率
+                val checkInterval = if (isInDeepStationary) {
+                    stateCheckInterval * 2 // 深度静止状态下减少检查频率
+                } else {
+                    stateCheckInterval
+                }
+                
+                delay(checkInterval)
             }
         }
         
@@ -286,10 +317,66 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         val gpsTimeout = (currentTime - lastGpsTime) > gpsTimeoutMs
         val previousState = currentState
         
+        // 检查是否应该进入深度静止状态
+        val shouldEnterDeepStationary = !isInDeepStationary && 
+                                       currentState == TrackingState.INDOOR && 
+                                       (currentTime - lastMovementTime) > deepStationaryTimeoutMs
+        
+        // 检查是否应该退出深度静止状态
+        val shouldExitDeepStationary = isInDeepStationary && (
+            (stepCount - initialStepCount) >= deepStationaryStepThreshold ||
+            lastAcceleration > deepStationaryAccelerationThreshold
+        )
+        
         when {
+            // 进入深度静止状态
+            shouldEnterDeepStationary -> {
+                currentState = TrackingState.DEEP_STATIONARY
+                isInDeepStationary = true
+                initialStepCount = stepCount
+                deepStationaryEntryTime = currentTime
+                android.util.Log.d("GpsTrackingService", "进入深度静止状态 - 步数: $stepCount, 加速度: $lastAcceleration")
+                
+                // 深度静止状态下停止GPS更新以节省电量
+                stopLocationUpdates()
+                
+                // 重新启动传感器更新以应用深度静止状态的优化设置
+                stopSensorUpdates()
+                startSensorUpdates()
+            }
+            
+            // 退出深度静止状态
+            shouldExitDeepStationary -> {
+                currentState = TrackingState.INDOOR
+                isInDeepStationary = false
+                lastMovementTime = currentTime
+                
+                // 计算本次深度静止状态持续时间
+                val sessionTime = currentTime - deepStationaryEntryTime
+                totalDeepStationaryTime += sessionTime
+                
+                android.util.Log.d("GpsTrackingService", "退出深度静止状态 - 步数增加: ${stepCount - initialStepCount}, 加速度: $lastAcceleration, 本次持续时间: ${sessionTime/1000}秒")
+                
+                // 重新启动GPS更新并进行环境检测
+                startLocationUpdates()
+                
+                // 重新启动传感器更新以恢复正常模式
+                stopSensorUpdates()
+                startSensorUpdates()
+            }
+            
+            // 深度静止状态下的监测
+            isInDeepStationary -> {
+                // 保持深度静止状态，仅监测步数和加速度
+                currentState = TrackingState.DEEP_STATIONARY
+                android.util.Log.v("GpsTrackingService", "深度静止状态监测 - 步数: $stepCount, 加速度: $lastAcceleration")
+            }
+            
+            // 正常状态转换逻辑
             gpsTimeout -> {
                 currentState = TrackingState.INDOOR
                 isGpsAvailable = false
+                lastMovementTime = currentTime
                 // 室内状态时降低GPS更新频率
                 if (!isPowerSaveMode) {
                     stopLocationUpdates()
@@ -299,13 +386,16 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             stepCount >= stepThreshold -> {
                 currentState = TrackingState.ACTIVE
                 isGpsAvailable = true
+                lastMovementTime = currentTime
             }
             lastAcceleration > accelerationThreshold -> {
                 currentState = TrackingState.DRIVING
                 isGpsAvailable = true
+                lastMovementTime = currentTime
             }
             isGpsAvailable -> {
                 currentState = TrackingState.OUTDOOR
+                lastMovementTime = currentTime
             }
             else -> {
                 currentState = TrackingState.INDOOR
@@ -423,10 +513,30 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 val x = event.values[0]
                 val y = event.values[1]
                 val z = event.values[2]
-                lastAcceleration = kotlin.math.sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+                val currentAcceleration = kotlin.math.sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+                
+                // 使用平滑算法减少噪声
+                lastAcceleration = lastAcceleration * 0.8f + currentAcceleration * 0.2f
+                
+                // 在深度静止状态下，记录明显的加速度变化
+                if (isInDeepStationary && currentAcceleration > deepStationaryAccelerationThreshold) {
+                    android.util.Log.d("GpsTrackingService", "深度静止状态检测到明显加速度: $currentAcceleration")
+                }
             }
             Sensor.TYPE_STEP_COUNTER -> {
-                stepCount = event.values[0].toInt()
+                val newStepCount = event.values[0].toInt()
+                
+                // 检查步数是否增加
+                if (newStepCount > stepCount) {
+                    val stepIncrease = newStepCount - stepCount
+                    stepCount = newStepCount
+                    
+                    // 在深度静止状态下，记录步数增加
+                    if (isInDeepStationary) {
+                        val totalStepIncrease = stepCount - initialStepCount
+                        android.util.Log.d("GpsTrackingService", "深度静止状态检测到步数增加: +$stepIncrease, 总计: $totalStepIncrease")
+                    }
+                }
             }
         }
     }
@@ -504,6 +614,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             TrackingState.OUTDOOR -> "室外模式"
             TrackingState.ACTIVE -> "活跃状态"
             TrackingState.DRIVING -> "驾驶状态"
+            TrackingState.DEEP_STATIONARY -> "深度静止模式"
         }
     }
     
@@ -554,6 +665,19 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     fun isPowerSaveMode(): Boolean = isPowerSaveMode
     fun getLastLocation(): Location? = lastLocation
     fun getGpxDirectoryPath(): String = gpxExporter.getGpxDirectoryPath().absolutePath
+    
+    // 深度静止状态相关方法
+    fun isInDeepStationary(): Boolean = isInDeepStationary
+    fun getInitialStepCount(): Int = initialStepCount
+    fun getStepIncreaseSinceDeepStationary(): Int = if (isInDeepStationary) stepCount - initialStepCount else 0
+    fun getLastMovementTime(): Long = lastMovementTime
+    fun getTimeInDeepStationary(): Long = if (isInDeepStationary) System.currentTimeMillis() - deepStationaryEntryTime else 0
+    fun getTotalDeepStationaryTime(): Long = totalDeepStationaryTime + if (isInDeepStationary) getTimeInDeepStationary() else 0
+    fun getDeepStationaryConfig(): Map<String, Any> = mapOf(
+        "timeoutMs" to deepStationaryTimeoutMs,
+        "stepThreshold" to deepStationaryStepThreshold,
+        "accelerationThreshold" to deepStationaryAccelerationThreshold
+    )
     
     // 行程管理相关方法
     fun getCurrentTripId(): String? = currentTripId
