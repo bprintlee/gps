@@ -5,6 +5,7 @@ import android.location.Location
 import android.location.LocationManager
 import android.os.Build
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
 import kotlinx.coroutines.*
 import java.util.concurrent.TimeUnit
@@ -149,12 +150,12 @@ class GpsAccuracyOptimizer(private val context: Context) {
     fun detectIndoorEnvironment(): Boolean {
         return try {
             // 检查位置权限
-            val hasFineLocation = android.content.ContextCompat.checkSelfPermission(
+            val hasFineLocation = ContextCompat.checkSelfPermission(
                 context, 
                 android.Manifest.permission.ACCESS_FINE_LOCATION
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
             
-            val hasCoarseLocation = android.content.ContextCompat.checkSelfPermission(
+            val hasCoarseLocation = ContextCompat.checkSelfPermission(
                 context, 
                 android.Manifest.permission.ACCESS_COARSE_LOCATION
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
