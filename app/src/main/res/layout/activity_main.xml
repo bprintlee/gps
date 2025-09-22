@@ -212,16 +212,6 @@
                 android:textSize="14sp"
                 android:padding="12dp" />
                 
-            <!-- 室内模式切换按钮 -->
-            <Button
-                android:id="@+id/indoorModeButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="切换到室内模式（禁用GPS）"
-                android:textSize="14sp"
-                android:padding="12dp"
-                android:backgroundTint="#FF9800" />
 
         </LinearLayout>
 

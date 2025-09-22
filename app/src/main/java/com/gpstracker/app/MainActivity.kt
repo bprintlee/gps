@@ -143,9 +143,6 @@ class MainActivity : AppCompatActivity() {
             checkGpsAccuracyStatus()
         }
         
-        binding.indoorModeButton.setOnClickListener {
-            toggleIndoorMode()
-        }
     }
     
     private fun checkPermissionsAndStartTracking() {
@@ -567,42 +564,6 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, statusMessage, Toast.LENGTH_LONG).show()
     }
     
-    private fun toggleIndoorMode() {
-        try {
-            val isIndoorMode = gpsService?.isIndoorModeEnabled() ?: false
-            val newIndoorMode = !isIndoorMode
-            
-            gpsService?.setIndoorMode(newIndoorMode)
-            
-            val message = if (newIndoorMode) {
-                "已切换到室内模式：禁用GPS，仅使用网络定位以节省电量"
-            } else {
-                "已切换到自动模式：根据环境自动选择最佳定位方式"
-            }
-            
-            // 更新按钮文本
-            binding.indoorModeButton.text = if (newIndoorMode) {
-                "切换到自动模式"
-            } else {
-                "切换到室内模式（禁用GPS）"
-            }
-            
-            // 更新按钮颜色
-            binding.indoorModeButton.setBackgroundColor(
-                if (newIndoorMode) {
-                    getColor(android.R.color.holo_orange_dark)
-                } else {
-                    getColor(android.R.color.holo_blue_light)
-                }
-            )
-            
-            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-            
-        } catch (e: Exception) {
-            Log.e("MainActivity", "切换室内模式失败", e)
-            Toast.makeText(this, "切换室内模式失败: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
     
     private fun updateMqttStatus(mqttStatus: String?) {
         val status = mqttStatus ?: "未知"

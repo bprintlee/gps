@@ -72,10 +72,14 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     // 省电模式配置 - 默认开启省电模式
     private var isPowerSaveMode = true
-    private var isIndoorMode = false // 强制室内模式
     private var gpsUpdateInterval = 10000L // 默认10秒间隔（省电模式）
     private var sensorUpdateInterval = SensorManager.SENSOR_DELAY_UI // 默认UI延迟
     private var stateCheckInterval = 15000L // 默认15秒检查一次状态（省电模式）
+    
+    // 环境检测配置
+    private var lastEnvironmentCheck = 0L
+    private val environmentCheckInterval = 60000L // 1分钟检查一次环境
+    private var lastDetectedMode: GpsAccuracyOptimizer.AccuracyMode? = null
     
     // 最后位置信息
     private var lastLocation: Location? = null
@@ -172,20 +176,41 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     private fun startLocationUpdates() {
         try {
+            // 检查是否需要重新检测环境
+            val currentTime = System.currentTimeMillis()
+            val shouldCheckEnvironment = (currentTime - lastEnvironmentCheck) > environmentCheckInterval
+            
             // 使用GPS精度优化器获取最佳配置
-            val accuracyMode = when {
-                isIndoorMode -> {
-                    android.util.Log.d("GpsTrackingService", "强制使用室内模式")
-                    GpsAccuracyOptimizer.AccuracyMode.INDOOR_NAVIGATION
+            val accuracyMode = if (isPowerSaveMode) {
+                android.util.Log.d("GpsTrackingService", "使用省电模式")
+                GpsAccuracyOptimizer.AccuracyMode.POWER_SAVE
+            } else {
+                // 使用智能推荐模式，自动检测室内环境
+                android.util.Log.d("GpsTrackingService", "使用智能推荐模式，自动检测环境")
+                val detectedMode = gpsAccuracyOptimizer.getSmartRecommendedMode()
+                
+                // 如果环境发生变化，记录并重新启动位置更新
+                if (shouldCheckEnvironment && lastDetectedMode != null && lastDetectedMode != detectedMode) {
+                    android.util.Log.d("GpsTrackingService", "环境变化检测: ${lastDetectedMode} -> $detectedMode")
+                    android.util.Log.d("GpsTrackingService", "环境变化，重新启动位置更新")
+                    
+                    // 更新检测时间
+                    lastEnvironmentCheck = currentTime
+                    lastDetectedMode = detectedMode
+                    
+                    // 重新启动位置更新
+                    stopLocationUpdates()
+                    startLocationUpdates()
+                    return
                 }
-                isPowerSaveMode -> {
-                    android.util.Log.d("GpsTrackingService", "使用省电模式")
-                    GpsAccuracyOptimizer.AccuracyMode.POWER_SAVE
+                
+                // 更新检测时间
+                if (shouldCheckEnvironment) {
+                    lastEnvironmentCheck = currentTime
+                    lastDetectedMode = detectedMode
                 }
-                else -> {
-                    // 使用智能推荐模式，自动检测室内环境
-                    gpsAccuracyOptimizer.getSmartRecommendedMode()
-                }
+                
+                detectedMode
             }
             
             val config = gpsAccuracyOptimizer.getAccuracyConfig(accuracyMode)
@@ -630,18 +655,6 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             }
         }
         
-        fun setIndoorMode(enabled: Boolean) {
-            isIndoorMode = enabled
-            android.util.Log.d("GpsTrackingService", "设置室内模式: $enabled")
-            
-            // 如果正在跟踪，重新启动位置更新
-            if (isTripActive) {
-                stopLocationUpdates()
-                startLocationUpdates()
-            }
-        }
-        
-        fun isIndoorModeEnabled(): Boolean = isIndoorMode
     
     // 手动切换省电模式
     fun togglePowerSaveMode() {

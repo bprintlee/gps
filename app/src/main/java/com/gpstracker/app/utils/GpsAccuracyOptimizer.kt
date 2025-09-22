@@ -152,19 +152,48 @@ class GpsAccuracyOptimizer(private val context: Context) {
             val lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
             val lastNetworkLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
             
-            // 如果GPS位置不可用或精度很差，可能是室内环境
-            val isGpsUnavailable = lastKnownLocation == null || 
-                                 lastKnownLocation.accuracy > 50f || 
-                                 (System.currentTimeMillis() - lastKnownLocation.time) > 300000L // 5分钟前
+            val currentTime = System.currentTimeMillis()
             
-            // 如果网络位置可用但GPS不可用，很可能是室内环境
-            val hasNetworkLocation = lastNetworkLocation != null && 
-                                   lastNetworkLocation.accuracy <= 100f &&
-                                   (System.currentTimeMillis() - lastNetworkLocation.time) < 300000L
+            // 检查GPS状态
+            val isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+            val isGpsRecent = lastKnownLocation != null && 
+                             (currentTime - lastKnownLocation.time) < 300000L // 5分钟内
+            val isGpsAccurate = lastKnownLocation?.accuracy ?: Float.MAX_VALUE <= 20f // 精度20米内
             
-            val isIndoor = isGpsUnavailable && hasNetworkLocation
+            // 检查网络定位状态
+            val isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+            val isNetworkRecent = lastNetworkLocation != null && 
+                                 (currentTime - lastNetworkLocation.time) < 300000L // 5分钟内
+            val isNetworkAccurate = lastNetworkLocation?.accuracy ?: Float.MAX_VALUE <= 100f // 精度100米内
             
-            Log.d(TAG, "室内环境检测: GPS不可用=$isGpsUnavailable, 网络位置可用=$hasNetworkLocation, 判断为室内=$isIndoor")
+            // 室内环境判断逻辑
+            val isIndoor = when {
+                // GPS完全不可用，但网络定位可用 - 很可能是室内
+                !isGpsEnabled && isNetworkEnabled && isNetworkRecent && isNetworkAccurate -> {
+                    Log.d(TAG, "GPS完全禁用，网络定位可用 - 判断为室内")
+                    true
+                }
+                // GPS启用但信号很差，网络定位可用 - 可能是室内
+                isGpsEnabled && !isGpsRecent && isNetworkEnabled && isNetworkRecent && isNetworkAccurate -> {
+                    Log.d(TAG, "GPS信号差，网络定位可用 - 判断为室内")
+                    true
+                }
+                // GPS启用但精度很差，网络定位可用 - 可能是室内
+                isGpsEnabled && isGpsRecent && !isGpsAccurate && isNetworkEnabled && isNetworkRecent && isNetworkAccurate -> {
+                    Log.d(TAG, "GPS精度差，网络定位可用 - 判断为室内")
+                    true
+                }
+                // 其他情况判断为室外
+                else -> {
+                    Log.d(TAG, "GPS状态良好或网络定位不可用 - 判断为室外")
+                    false
+                }
+            }
+            
+            Log.d(TAG, "室内环境检测详情:")
+            Log.d(TAG, "  GPS启用: $isGpsEnabled, 最近: $isGpsRecent, 精确: $isGpsAccurate")
+            Log.d(TAG, "  网络启用: $isNetworkEnabled, 最近: $isNetworkRecent, 精确: $isNetworkAccurate")
+            Log.d(TAG, "  最终判断: ${if (isIndoor) "室内" else "室外"}")
             
             isIndoor
         } catch (e: Exception) {
