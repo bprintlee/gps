@@ -307,11 +307,7 @@ class MainActivity : AppCompatActivity() {
         
         binding.statusText.setTextColor(ContextCompat.getColor(this, stateColor))
         
-        // 隐藏后台服务状态显示
-        binding.serviceStatusText.visibility = android.view.View.GONE
-        
-        // 隐藏步数统计显示
-        binding.stepCountText.visibility = android.view.View.GONE
+        // 后台服务状态和步数统计显示已删除
         
         // 更新已保存点数
         updateSavedPointsCount()
@@ -486,28 +482,7 @@ class MainActivity : AppCompatActivity() {
             )
         }
         
-        // 更新总行程数
-        if (isTracking) {
-            val serviceIntent = Intent(this, GpsTrackingService::class.java)
-            try {
-                val serviceConnection = object : android.content.ServiceConnection {
-                    override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
-                        service?.let {
-                            val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
-                            val totalTrips = gpsService.getAllTripIds().size
-                            binding.totalTripsText.text = totalTrips.toString()
-                            unbindService(this)
-                        }
-                    }
-                    override fun onServiceDisconnected(name: android.content.ComponentName?) {}
-                }
-                bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
-            } catch (e: Exception) {
-                binding.totalTripsText.text = "0"
-            }
-        } else {
-            binding.totalTripsText.text = "0"
-        }
+        // 总行程数显示已删除
     }
     
     
