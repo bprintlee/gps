@@ -15,7 +15,7 @@ import java.util.*
 
 class MqttManager(private val context: Context) {
     
-    private var mqttClient: Android15CompatibleMqttClient? = null
+    private var mqttClient: MqttAndroidClient? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val logManager = LogManager(context)
     
@@ -39,6 +39,13 @@ class MqttManager(private val context: Context) {
         logManager.saveLog("MqttManager", "DEBUG", "开始MQTT连接流程")
         
         try {
+            // Android 15兼容性检查
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                Log.w("MqttManager", "检测到Android 15，使用兼容性处理")
+                connectWithAndroid15Compatibility()
+                return
+            }
+            
             // 检查网络连接
             if (!isNetworkAvailable()) {
                 Log.w("MqttManager", "网络不可用，跳过MQTT连接")
@@ -69,7 +76,7 @@ class MqttManager(private val context: Context) {
             Log.d("MqttManager", "服务器URI: $serverUri")
             Log.d("MqttManager", "客户端ID: $clientId")
             
-            mqttClient = Android15CompatibleMqttClient(context, serverUri, clientId)
+            mqttClient = MqttAndroidClient(context, serverUri, clientId)
             Log.d("MqttManager", "MQTT客户端创建成功")
             
             val options = MqttConnectOptions().apply {
@@ -183,6 +190,12 @@ class MqttManager(private val context: Context) {
     fun publishLocation(gpsData: GpsData) {
         serviceScope.launch {
             try {
+                // Android 15兼容性处理 - 跳过MQTT发布
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                    Log.d("MqttManager", "Android 15兼容性：跳过MQTT位置数据发布")
+                    return@launch
+                }
+                
                 if (!isNetworkAvailable()) {
                     Log.w("MqttManager", "网络不可用，跳过位置数据发送")
                     return@launch
@@ -306,6 +319,90 @@ class MqttManager(private val context: Context) {
         }
     }
     
+    
+    /**
+     * Android 15兼容性连接方法
+     * 使用简化的连接方式避免BroadcastReceiver注册问题
+     */
+    private fun connectWithAndroid15Compatibility() {
+        try {
+            Log.d("MqttManager", "使用Android 15兼容性连接方式")
+            
+            // 检查网络连接
+            if (!isNetworkAvailable()) {
+                Log.w("MqttManager", "网络不可用，跳过MQTT连接")
+                return
+            }
+            
+            // 防止频繁连接
+            val currentTime = System.currentTimeMillis()
+            if (isConnecting) {
+                Log.d("MqttManager", "MQTT连接已在进行中，跳过")
+                return
+            }
+            if ((currentTime - lastConnectAttempt) < minConnectInterval) {
+                Log.d("MqttManager", "连接间隔太短，跳过")
+                return
+            }
+            
+            isConnecting = true
+            lastConnectAttempt = currentTime
+            connectionAttempts++
+            lastConnectionState = "连接中"
+            
+            // 创建MQTT客户端
+            mqttClient = MqttAndroidClient(context, serverUri, clientId)
+            
+            val options = MqttConnectOptions().apply {
+                isCleanSession = true
+                isAutomaticReconnect = false // 禁用自动重连避免BroadcastReceiver问题
+                connectionTimeout = 10
+                keepAliveInterval = 60
+                mqttVersion = MqttConnectOptions.MQTT_VERSION_3_1_1
+                isHttpsHostnameVerificationEnabled = false
+            }
+            
+            // 简化的回调，不处理连接丢失重连
+            mqttClient?.setCallback(object : MqttCallback {
+                override fun connectionLost(cause: Throwable?) {
+                    Log.w("MqttManager", "Android 15兼容模式：连接丢失", cause)
+                    isConnecting = false
+                    lastConnectionState = "连接丢失"
+                }
+                
+                override fun messageArrived(topic: String?, message: MqttMessage?) {
+                    Log.d("MqttManager", "收到MQTT消息: $topic -> ${message?.toString()}")
+                }
+                
+                override fun deliveryComplete(token: IMqttDeliveryToken?) {
+                    Log.d("MqttManager", "MQTT消息发送完成")
+                }
+            })
+            
+            // 尝试连接
+            mqttClient?.connect(options, null, object : IMqttActionListener {
+                override fun onSuccess(asyncActionToken: IMqttToken?) {
+                    Log.d("MqttManager", "Android 15兼容模式：MQTT连接成功")
+                    lastConnectionState = "已连接"
+                    lastError = null
+                    isConnecting = false
+                }
+                
+                override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
+                    Log.e("MqttManager", "Android 15兼容模式：MQTT连接失败", exception)
+                    lastConnectionState = "连接失败"
+                    lastError = exception
+                    isConnecting = false
+                }
+            })
+            
+        } catch (e: Exception) {
+            Log.e("MqttManager", "Android 15兼容性连接异常", e)
+            lastConnectionState = "连接异常"
+            lastError = e
+            isConnecting = false
+        }
+    }
     
     /**
      * 清理资源
