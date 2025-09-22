@@ -148,9 +148,40 @@ class GpsAccuracyOptimizer(private val context: Context) {
      */
     fun detectIndoorEnvironment(): Boolean {
         return try {
+            // 检查位置权限
+            val hasFineLocation = android.content.ContextCompat.checkSelfPermission(
+                context, 
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            
+            val hasCoarseLocation = android.content.ContextCompat.checkSelfPermission(
+                context, 
+                android.Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            
+            if (!hasFineLocation && !hasCoarseLocation) {
+                Log.w(TAG, "没有位置权限，无法检测室内环境")
+                return false
+            }
+            
             // 获取最后已知位置
-            val lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            val lastNetworkLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            val lastKnownLocation = if (hasFineLocation) {
+                try {
+                    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                } catch (e: SecurityException) {
+                    Log.w(TAG, "获取GPS位置失败", e)
+                    null
+                }
+            } else null
+            
+            val lastNetworkLocation = if (hasCoarseLocation || hasFineLocation) {
+                try {
+                    locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                } catch (e: SecurityException) {
+                    Log.w(TAG, "获取网络位置失败", e)
+                    null
+                }
+            } else null
             
             val currentTime = System.currentTimeMillis()
             
