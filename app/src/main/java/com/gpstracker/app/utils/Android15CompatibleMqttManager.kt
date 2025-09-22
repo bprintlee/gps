@@ -17,10 +17,15 @@ import java.util.*
  * 解决BroadcastReceiver注册时的SecurityException问题
  */
 class Android15CompatibleMqttManager(private val context: Context) {
-    
+
     private var mqttClient: MqttAndroidClient? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val logManager = LogManager(context)
+    
+    init {
+        // 应用Android 15兼容性修复
+        Android15MqttFix.applyMqttLibraryFix()
+    }
     
     // MQTT配置
     private val serverUri = "tcp://8.153.37.172:1883"
