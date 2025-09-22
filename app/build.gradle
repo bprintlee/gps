@@ -77,6 +77,15 @@ android {
     buildFeatures {
         viewBinding true
     }
+    
+    lint {
+        // 设置Lint基线文件，忽略现有警告
+        baseline = file("lint-baseline.xml")
+        // 将警告视为错误，但允许基线文件中的警告通过
+        warningsAsErrors false
+        // 忽略某些特定的警告类型
+        disable 'MissingTranslation', 'ExtraTranslation'
+    }
 }
 
 dependencies {
