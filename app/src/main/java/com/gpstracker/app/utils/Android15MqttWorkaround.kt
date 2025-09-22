@@ -317,7 +317,7 @@ class Android15MqttWorkaround(private val context: Context) {
                 
                 if (isNetworkAvailable()) {
                     Log.d(TAG, "网络可用，尝试重连...")
-                    connect(serverUri, clientId, topic)
+                    connect()
                 } else {
                     Log.w(TAG, "网络不可用，延迟重连")
                     // 网络不可用时，延长重连间隔

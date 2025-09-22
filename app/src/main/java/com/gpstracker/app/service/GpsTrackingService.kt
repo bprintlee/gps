@@ -635,7 +635,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             android.util.Log.d("GpsTrackingService", "设置室内模式: $enabled")
             
             // 如果正在跟踪，重新启动位置更新
-            if (isTracking) {
+            if (isTripActive) {
                 stopLocationUpdates()
                 startLocationUpdates()
             }
