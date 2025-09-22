@@ -95,21 +95,8 @@
             android:enabled="true"
             android:exported="false" />
             
-        <!-- MQTT BroadcastReceiver - 官方Eclipse Paho库的接收器 -->
-        <receiver
-            android:name="org.eclipse.paho.android.service.AlarmReceiver"
-            android:enabled="true"
-            android:exported="false" />
-            
-        <receiver
-            android:name="org.eclipse.paho.android.service.MqttService$MqttReceiver"
-            android:enabled="true"
-            android:exported="false" />
-            
-        <receiver
-            android:name="org.eclipse.paho.android.service.MqttService$NetworkStateReceiver"
-            android:enabled="true"
-            android:exported="false" />
+        <!-- 注意：官方Eclipse Paho库的BroadcastReceiver是内部动态注册的，
+             不需要在AndroidManifest.xml中显式声明 -->
             
     </application>
 
