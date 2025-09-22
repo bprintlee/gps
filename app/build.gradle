@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace 'com.gpstracker.app'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.gpstracker.app"
         minSdk 24
-        targetSdk 34
+        targetSdk 35
         versionCode 8
         versionName "1.0.7"
 
