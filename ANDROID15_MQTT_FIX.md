@@ -26,13 +26,13 @@ android {
 }
 ```
 
-### 2. 添加MQTT BroadcastReceiver声明
+### 2. 保持MQTT服务声明
 
 **文件**: `app/src/main/AndroidManifest.xml`
 ```xml
-<!-- MQTT BroadcastReceiver - Android 15兼容性修复 -->
-<receiver
-    android:name="org.eclipse.paho.android.service.AlarmReceiver"
+<!-- MQTT服务 -->
+<service
+    android:name="org.eclipse.paho.android.service.MqttService"
     android:enabled="true"
     android:exported="false" />
 ```
@@ -113,7 +113,7 @@ Eclipse Paho MQTT库在Android 15上存在兼容性问题，特别是：
 ## 相关文件
 
 - `app/build.gradle` - 更新SDK版本
-- `app/src/main/AndroidManifest.xml` - 添加BroadcastReceiver声明
+- `app/src/main/AndroidManifest.xml` - 保持MQTT服务声明
 - `app/src/main/java/com/gpstracker/app/utils/MqttManager.kt` - 添加Android 15兼容性处理
 
 ## 注意事项
