@@ -15,7 +15,7 @@ import java.util.*
 
 class MqttManager(private val context: Context) {
     
-    private var mqttClient: MqttAndroidClient? = null
+    private var mqttClient: Android15CompatibleMqttClient? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val logManager = LogManager(context)
     
@@ -69,7 +69,7 @@ class MqttManager(private val context: Context) {
             Log.d("MqttManager", "服务器URI: $serverUri")
             Log.d("MqttManager", "客户端ID: $clientId")
             
-            mqttClient = MqttAndroidClient(context, serverUri, clientId)
+            mqttClient = Android15CompatibleMqttClient(context, serverUri, clientId)
             Log.d("MqttManager", "MQTT客户端创建成功")
             
             val options = MqttConnectOptions().apply {
