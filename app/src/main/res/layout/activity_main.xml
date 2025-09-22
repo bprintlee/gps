@@ -201,6 +201,16 @@
                     android:minHeight="32dp" />
 
             </LinearLayout>
+            
+            <!-- GPS精度检查按钮 -->
+            <Button
+                android:id="@+id/checkAccuracyButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="检查GPS精度状态"
+                android:textSize="14sp"
+                android:padding="12dp" />
 
         </LinearLayout>
 

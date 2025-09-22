@@ -29,6 +29,7 @@ import com.gpstracker.app.model.GpsData
 import com.gpstracker.app.model.TrackingState
 import com.gpstracker.app.utils.GpxExporter
 import com.gpstracker.app.utils.MqttManager
+import com.gpstracker.app.utils.GpsAccuracyOptimizer
 import com.gpstracker.app.database.GpsDatabase
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -40,6 +41,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private lateinit var sensorManager: SensorManager
     private lateinit var gpxExporter: GpxExporter
     private lateinit var mqttManager: MqttManager
+    private lateinit var gpsAccuracyOptimizer: GpsAccuracyOptimizer
     private lateinit var gpsDatabase: GpsDatabase
     private lateinit var logManager: com.gpstracker.app.utils.LogManager
     
@@ -106,6 +108,10 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             mqttManager = MqttManager(this)
             android.util.Log.d("GpsTrackingService", "MQTT管理器初始化完成")
             
+            android.util.Log.d("GpsTrackingService", "开始初始化GPS精度优化器...")
+            gpsAccuracyOptimizer = GpsAccuracyOptimizer(this)
+            android.util.Log.d("GpsTrackingService", "GPS精度优化器初始化完成")
+            
             gpsDatabase = GpsDatabase(this)
             android.util.Log.d("GpsTrackingService", "数据库初始化完成")
             
@@ -165,19 +171,31 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     private fun startLocationUpdates() {
         try {
-            // 根据省电模式调整GPS更新频率
-            val interval = if (isPowerSaveMode) gpsUpdateInterval * 2 else gpsUpdateInterval
-            val distance = if (isPowerSaveMode) 5f else 1f // 省电模式降低精度要求
+            // 使用GPS精度优化器获取最佳配置
+            val accuracyStatus = gpsAccuracyOptimizer.checkGpsAccuracy()
+            val accuracyMode = if (isPowerSaveMode) {
+                GpsAccuracyOptimizer.AccuracyMode.POWER_SAVE
+            } else {
+                accuracyStatus.recommendedMode
+            }
+            
+            val config = gpsAccuracyOptimizer.getAccuracyConfig(accuracyMode)
+            val bestProvider = gpsAccuracyOptimizer.getBestLocationProvider()
+            
+            android.util.Log.d("GpsTrackingService", "使用精度模式: $accuracyMode")
+            android.util.Log.d("GpsTrackingService", "最佳位置提供者: $bestProvider")
+            android.util.Log.d("GpsTrackingService", "更新间隔: ${config.interval}ms")
+            android.util.Log.d("GpsTrackingService", "最小位移: ${config.smallestDisplacement}m")
             
             locationManager.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER,
-                interval,
-                distance,
+                bestProvider,
+                config.interval,
+                config.smallestDisplacement,
                 this,
                 Looper.getMainLooper()
             )
         } catch (e: SecurityException) {
-            e.printStackTrace()
+            android.util.Log.e("GpsTrackingService", "启动位置更新失败", e)
         }
     }
     
@@ -296,6 +314,17 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     override fun onLocationChanged(location: Location) {
         lastGpsTime = System.currentTimeMillis()
         isGpsAvailable = true
+        
+        // 使用精度优化器验证位置精度
+        val accuracy = gpsAccuracyOptimizer.validateLocationAccuracy(location)
+        android.util.Log.d("GpsTrackingService", "位置精度: $accuracy, 精度值: ${location.accuracy}m")
+        
+        // 如果精度太差，记录但不处理
+        if (accuracy == com.gpstracker.app.utils.LocationAccuracy.UNRELIABLE) {
+            android.util.Log.w("GpsTrackingService", "位置精度不可靠，跳过处理: ${location.accuracy}m")
+            return
+        }
+        
         lastLocation = location // 保存最后位置
         
         val gpsData = GpsData(

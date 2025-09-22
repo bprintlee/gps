@@ -15,6 +15,7 @@ import com.gpstracker.app.databinding.ActivityMainBinding
 import com.gpstracker.app.service.GpsTrackingService
 import com.gpstracker.app.model.TrackingState
 import com.gpstracker.app.utils.EnhancedCrashHandler
+import com.gpstracker.app.utils.GpsAccuracyOptimizer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
@@ -135,6 +136,10 @@ class MainActivity : AppCompatActivity() {
         
         binding.testMqttButton.setOnClickListener {
             testMqttConnection()
+        }
+        
+        binding.checkAccuracyButton.setOnClickListener {
+            checkGpsAccuracyStatus()
         }
     }
     
@@ -535,6 +540,26 @@ class MainActivity : AppCompatActivity() {
         } else {
             Toast.makeText(this, "请先启动GPS跟踪", Toast.LENGTH_SHORT).show()
         }
+    }
+    
+    private fun checkGpsAccuracyStatus() {
+        val accuracyOptimizer = GpsAccuracyOptimizer(this)
+        val status = accuracyOptimizer.checkGpsAccuracy()
+        val tips = accuracyOptimizer.getAccuracyOptimizationTips()
+        
+        val statusMessage = buildString {
+            appendLine("GPS精度状态:")
+            appendLine("GPS: ${if (status.isGpsEnabled) "已启用" else "未启用"}")
+            appendLine("网络定位: ${if (status.isNetworkEnabled) "已启用" else "未启用"}")
+            appendLine("推荐模式: ${status.recommendedMode}")
+            appendLine("")
+            appendLine("优化建议:")
+            tips.forEach { tip ->
+                appendLine("• $tip")
+            }
+        }
+        
+        Toast.makeText(this, statusMessage, Toast.LENGTH_LONG).show()
     }
     
     private fun updateMqttStatus(mqttStatus: String?) {
