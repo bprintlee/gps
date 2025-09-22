@@ -1,8 +1,13 @@
 package com.gpstracker.app
 
 import android.app.Application
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.util.Log
 import com.gpstracker.app.utils.CrashHandler
+import com.gpstracker.app.utils.EnhancedCrashHandler
 
 class GPSTrackerApplication : Application() {
     
@@ -11,9 +16,9 @@ class GPSTrackerApplication : Application() {
         Log.d("GPSTrackerApp", "=== Application onCreate ===")
         
         try {
-            // 初始化崩溃处理器
-            CrashHandler(this)
-            Log.d("GPSTrackerApp", "崩溃处理器初始化完成")
+            // 初始化增强版崩溃处理器
+            EnhancedCrashHandler.getInstance(this)
+            Log.d("GPSTrackerApp", "增强版崩溃处理器初始化完成")
             
             // 清理旧的崩溃日志
             CrashHandler(this).cleanupOldLogs()
@@ -23,6 +28,8 @@ class GPSTrackerApplication : Application() {
             val packageInfo = packageManager.getPackageInfo(packageName, 0)
             Log.d("GPSTrackerApp", "包信息加载成功: ${packageInfo.versionName}")
             
+            // Android 15兼容性处理已移至MqttManager
+            
             Log.d("GPSTrackerApp", "=== Application初始化完成 ===")
         } catch (e: Exception) {
             Log.e("GPSTrackerApp", "=== Application初始化失败 ===", e)
@@ -31,4 +38,5 @@ class GPSTrackerApplication : Application() {
             Log.e("GPSTrackerApp", "异常堆栈: ${e.stackTraceToString()}")
         }
     }
+    
 }
