@@ -39,9 +39,9 @@ class MqttManager(private val context: Context) {
         logManager.saveLog("MqttManager", "DEBUG", "开始MQTT连接流程")
         
         try {
-            // Android 15兼容性检查
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                Log.w("MqttManager", "检测到Android 15，使用兼容性处理")
+            // Android 15兼容性检查 (API 35)
+            if (Build.VERSION.SDK_INT >= 35) {
+                Log.w("MqttManager", "检测到Android 15 (API ${Build.VERSION.SDK_INT})，使用兼容性处理")
                 connectWithAndroid15Compatibility()
                 return
             }
@@ -191,7 +191,7 @@ class MqttManager(private val context: Context) {
         serviceScope.launch {
             try {
                 // Android 15兼容性处理 - 跳过MQTT发布
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                if (Build.VERSION.SDK_INT >= 35) {
                     Log.d("MqttManager", "Android 15兼容性：跳过MQTT位置数据发布")
                     return@launch
                 }
@@ -285,6 +285,7 @@ class MqttManager(private val context: Context) {
     fun getConnectionInfo(): String {
         return try {
             when {
+                Build.VERSION.SDK_INT >= 35 -> "Android 15兼容模式"
                 isConnecting -> "连接中..."
                 isConnected() -> "已连接"
                 else -> lastConnectionState
