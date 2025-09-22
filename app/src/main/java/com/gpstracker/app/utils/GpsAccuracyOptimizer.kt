@@ -144,6 +144,55 @@ class GpsAccuracyOptimizer(private val context: Context) {
     }
     
     /**
+     * 检测是否为室内环境
+     */
+    fun detectIndoorEnvironment(): Boolean {
+        return try {
+            // 获取最后已知位置
+            val lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            val lastNetworkLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            
+            // 如果GPS位置不可用或精度很差，可能是室内环境
+            val isGpsUnavailable = lastKnownLocation == null || 
+                                 lastKnownLocation.accuracy > 50f || 
+                                 (System.currentTimeMillis() - lastKnownLocation.time) > 300000L // 5分钟前
+            
+            // 如果网络位置可用但GPS不可用，很可能是室内环境
+            val hasNetworkLocation = lastNetworkLocation != null && 
+                                   lastNetworkLocation.accuracy <= 100f &&
+                                   (System.currentTimeMillis() - lastNetworkLocation.time) < 300000L
+            
+            val isIndoor = isGpsUnavailable && hasNetworkLocation
+            
+            Log.d(TAG, "室内环境检测: GPS不可用=$isGpsUnavailable, 网络位置可用=$hasNetworkLocation, 判断为室内=$isIndoor")
+            
+            isIndoor
+        } catch (e: Exception) {
+            Log.e(TAG, "检测室内环境失败", e)
+            false
+        }
+    }
+    
+    /**
+     * 获取智能推荐的精度模式
+     */
+    fun getSmartRecommendedMode(): AccuracyMode {
+        val isIndoor = detectIndoorEnvironment()
+        val status = checkGpsAccuracy()
+        
+        return when {
+            isIndoor -> {
+                Log.d(TAG, "检测到室内环境，推荐使用室内导航模式")
+                AccuracyMode.INDOOR_NAVIGATION
+            }
+            status.isGpsEnabled && status.isNetworkEnabled -> AccuracyMode.HIGH_ACCURACY
+            status.isGpsEnabled -> AccuracyMode.BALANCED
+            status.isNetworkEnabled -> AccuracyMode.POWER_SAVE
+            else -> AccuracyMode.POWER_SAVE
+        }
+    }
+    
+    /**
      * 获取最佳位置提供者
      */
     fun getBestLocationProvider(): String {

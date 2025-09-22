@@ -72,6 +72,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     // 省电模式配置 - 默认开启省电模式
     private var isPowerSaveMode = true
+    private var isIndoorMode = false // 强制室内模式
     private var gpsUpdateInterval = 10000L // 默认10秒间隔（省电模式）
     private var sensorUpdateInterval = SensorManager.SENSOR_DELAY_UI // 默认UI延迟
     private var stateCheckInterval = 15000L // 默认15秒检查一次状态（省电模式）
@@ -172,11 +173,19 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private fun startLocationUpdates() {
         try {
             // 使用GPS精度优化器获取最佳配置
-            val accuracyStatus = gpsAccuracyOptimizer.checkGpsAccuracy()
-            val accuracyMode = if (isPowerSaveMode) {
-                GpsAccuracyOptimizer.AccuracyMode.POWER_SAVE
-            } else {
-                accuracyStatus.recommendedMode
+            val accuracyMode = when {
+                isIndoorMode -> {
+                    android.util.Log.d("GpsTrackingService", "强制使用室内模式")
+                    GpsAccuracyOptimizer.AccuracyMode.INDOOR_NAVIGATION
+                }
+                isPowerSaveMode -> {
+                    android.util.Log.d("GpsTrackingService", "使用省电模式")
+                    GpsAccuracyOptimizer.AccuracyMode.POWER_SAVE
+                }
+                else -> {
+                    // 使用智能推荐模式，自动检测室内环境
+                    gpsAccuracyOptimizer.getSmartRecommendedMode()
+                }
             }
             
             val config = gpsAccuracyOptimizer.getAccuracyConfig(accuracyMode)
@@ -612,14 +621,27 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         }
     }
     
-    fun testMqttConnection() {
-        try {
-            android.util.Log.d("GpsTrackingService", "开始测试MQTT连接...")
-            mqttManager.testConnection()
-        } catch (e: Exception) {
-            android.util.Log.e("GpsTrackingService", "测试MQTT连接失败", e)
+        fun testMqttConnection() {
+            try {
+                android.util.Log.d("GpsTrackingService", "开始测试MQTT连接...")
+                mqttManager.testConnection()
+            } catch (e: Exception) {
+                android.util.Log.e("GpsTrackingService", "测试MQTT连接失败", e)
+            }
         }
-    }
+        
+        fun setIndoorMode(enabled: Boolean) {
+            isIndoorMode = enabled
+            android.util.Log.d("GpsTrackingService", "设置室内模式: $enabled")
+            
+            // 如果正在跟踪，重新启动位置更新
+            if (isTracking) {
+                stopLocationUpdates()
+                startLocationUpdates()
+            }
+        }
+        
+        fun isIndoorModeEnabled(): Boolean = isIndoorMode
     
     // 手动切换省电模式
     fun togglePowerSaveMode() {
