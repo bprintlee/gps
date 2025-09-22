@@ -58,7 +58,8 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
 
             <Button
                 android:id="@+id/copyLogsButton"
@@ -82,6 +83,34 @@
 
         </LinearLayout>
 
+        <!-- 第三行按钮 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/selectAllButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="全选内容"
+                android:textColor="@color/white"
+                android:background="@color/primary_color" />
+
+            <Button
+                android:id="@+id/clearContentButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="清空内容"
+                android:textColor="@color/white"
+                android:background="@color/error_color" />
+
+        </LinearLayout>
+
     </LinearLayout>
 
     <!-- 日志文件列表 -->
@@ -101,7 +130,7 @@
         android:background="@color/card_background"
         android:padding="12dp">
 
-        <TextView
+        <EditText
             android:id="@+id/logListText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -109,7 +138,14 @@
             android:textSize="14sp"
             android:textColor="@color/text_secondary"
             android:fontFamily="monospace"
-            android:lineSpacingExtra="2dp" />
+            android:lineSpacingExtra="2dp"
+            android:background="@android:color/transparent"
+            android:inputType="textMultiLine"
+            android:scrollbars="vertical"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:selectAllOnFocus="true"
+            android:hint="崩溃日志文件列表将显示在这里，您可以自由选择和复制" />
 
     </ScrollView>
 
@@ -130,7 +166,7 @@
         android:background="@color/card_background"
         android:padding="12dp">
 
-        <TextView
+        <EditText
             android:id="@+id/logContentText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -138,7 +174,14 @@
             android:textSize="12sp"
             android:textColor="@color/text_secondary"
             android:fontFamily="monospace"
-            android:lineSpacingExtra="2dp" />
+            android:lineSpacingExtra="2dp"
+            android:background="@android:color/transparent"
+            android:inputType="textMultiLine"
+            android:scrollbars="vertical"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:selectAllOnFocus="true"
+            android:hint="日志内容将显示在这里，您可以自由选择和复制" />
 
     </ScrollView>
 

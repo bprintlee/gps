@@ -60,6 +60,14 @@ class SimpleDebugActivity : AppCompatActivity() {
                 viewRuntimeLogs()
             }
             
+            binding.selectAllButton.setOnClickListener {
+                selectAllContent()
+            }
+            
+            binding.clearContentButton.setOnClickListener {
+                clearContent()
+            }
+            
         } catch (e: Exception) {
             android.util.Log.e("SimpleDebugActivity", "onCreate failed", e)
             Toast.makeText(this, "调试页面初始化失败: ${e.message}", Toast.LENGTH_LONG).show()
@@ -72,8 +80,8 @@ class SimpleDebugActivity : AppCompatActivity() {
             val crashLogs = crashHandler.getCrashLogs()
             
             if (crashLogs.isEmpty()) {
-                binding.logListText.text = "暂无崩溃日志"
-                binding.logContentText.text = "没有找到崩溃日志文件\n\n提示：当应用发生崩溃时，会自动生成崩溃日志文件。\n\n您可以点击'创建测试日志'按钮来测试功能。"
+                binding.logListText.setText("暂无崩溃日志")
+                binding.logContentText.setText("没有找到崩溃日志文件\n\n提示：当应用发生崩溃时，会自动生成崩溃日志文件。\n\n您可以点击'创建测试日志'按钮来测试功能。")
             } else {
                 // 显示日志文件列表
                 val logListText = buildString {
@@ -94,7 +102,7 @@ class SimpleDebugActivity : AppCompatActivity() {
                         }
                     }
                 }
-                binding.logListText.text = logListText
+                binding.logListText.setText(logListText)
                 
                 // 显示最新日志的内容
                 val latestLog = crashLogs.maxByOrNull { it.lastModified() }
@@ -105,8 +113,8 @@ class SimpleDebugActivity : AppCompatActivity() {
             
         } catch (e: Exception) {
             android.util.Log.e("SimpleDebugActivity", "loadCrashLogs failed", e)
-            binding.logListText.text = "加载日志列表失败: ${e.message}"
-            binding.logContentText.text = "错误: ${e.message}\n\n请检查应用权限或重启应用。"
+            binding.logListText.setText("加载日志列表失败: ${e.message}")
+            binding.logContentText.setText("错误: ${e.message}\n\n请检查应用权限或重启应用。")
         }
     }
     
@@ -117,11 +125,13 @@ class SimpleDebugActivity : AppCompatActivity() {
             } else {
                 "文件不存在或无法读取"
             }
-            binding.logContentText.text = content
+            binding.logContentText.setText(content)
+            // 将光标移到末尾
+            binding.logContentText.setSelection(binding.logContentText.text.length)
             
         } catch (e: Exception) {
             android.util.Log.e("SimpleDebugActivity", "读取日志文件失败", e)
-            binding.logContentText.text = "读取文件失败: ${e.message}"
+            binding.logContentText.setText("读取文件失败: ${e.message}")
         }
     }
     
@@ -205,13 +215,35 @@ class SimpleDebugActivity : AppCompatActivity() {
         try {
             val runtimeLogs = crashHandler.getAllRuntimeLogs()
             if (runtimeLogs.isNotEmpty()) {
-                binding.logContentText.text = "=== 运行时日志 ===\n\n$runtimeLogs"
+                binding.logContentText.setText("=== 运行时日志 ===\n\n$runtimeLogs")
+                // 将光标移到末尾
+                binding.logContentText.setSelection(binding.logContentText.text.length)
             } else {
-                binding.logContentText.text = "暂无运行时日志\n\n运行时日志会记录应用运行过程中的重要事件。"
+                binding.logContentText.setText("暂无运行时日志\n\n运行时日志会记录应用运行过程中的重要事件。")
             }
         } catch (e: Exception) {
             android.util.Log.e("SimpleDebugActivity", "查看运行时日志失败", e)
-            binding.logContentText.text = "查看运行时日志失败: ${e.message}"
+            binding.logContentText.setText("查看运行时日志失败: ${e.message}")
+        }
+    }
+    
+    private fun selectAllContent() {
+        try {
+            binding.logContentText.selectAll()
+            Toast.makeText(this, "已全选内容，您可以复制", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            android.util.Log.e("SimpleDebugActivity", "全选内容失败", e)
+            Toast.makeText(this, "全选失败: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun clearContent() {
+        try {
+            binding.logContentText.setText("")
+            Toast.makeText(this, "内容已清空", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            android.util.Log.e("SimpleDebugActivity", "清空内容失败", e)
+            Toast.makeText(this, "清空失败: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
     
