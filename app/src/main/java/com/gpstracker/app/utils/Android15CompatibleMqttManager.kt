@@ -39,10 +39,7 @@ class Android15CompatibleMqttManager(private val context: Context) {
         return mqttWorkaround.getDetailedState()
     }
     
-    fun testConnection() {
-        Log.d("Android15CompatibleMqttManager", "测试Android 15兼容的MQTT连接")
-        mqttWorkaround.testConnection()
-    }
+    // MQTT测试功能已删除
     
     fun cleanup() {
         Log.d("Android15CompatibleMqttManager", "清理Android 15兼容的MQTT资源")

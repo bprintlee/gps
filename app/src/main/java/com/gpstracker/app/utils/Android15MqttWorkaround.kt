@@ -217,58 +217,7 @@ class Android15MqttWorkaround(private val context: Context) {
         }
     }
     
-    fun testConnection() {
-        serviceScope.launch {
-            try {
-                Log.d(TAG, "=== 开始测试MQTT连接 ===")
-                
-                if (!isNetworkAvailable()) {
-                    Log.w(TAG, "网络不可用，无法测试连接")
-                    return@launch
-                }
-                
-                // 如果未连接，先连接
-                if (!isConnected()) {
-                    Log.d(TAG, "未连接，先建立连接...")
-                    connect()
-                    
-                    // 等待连接建立
-                    var retryCount = 0
-                    val maxRetries = 10
-                    while (retryCount < maxRetries && !isConnected()) {
-                        Log.d(TAG, "等待连接建立... (${retryCount + 1}/$maxRetries)")
-                        delay(1000)
-                        retryCount++
-                    }
-                }
-                
-                if (isConnected()) {
-                    Log.d(TAG, "连接已建立，发送测试消息...")
-                    
-                    val testMessage = """
-                    {
-                      "_type": "test",
-                      "message": "MQTT连接测试",
-                      "timestamp": ${System.currentTimeMillis() / 1000},
-                      "clientId": "$clientId"
-                    }
-                    """.trimIndent()
-                    
-                    val mqttMessage = MqttMessage(testMessage.toByteArray())
-                    mqttMessage.qos = 1
-                    
-                    mqttClient?.publish(topic, mqttMessage)
-                    
-                    Log.d(TAG, "✅ 测试消息发送成功！")
-                } else {
-                    Log.w(TAG, "⚠️ 连接建立失败，无法发送测试消息")
-                }
-                
-            } catch (e: Exception) {
-                Log.e(TAG, "测试连接异常", e)
-            }
-        }
-    }
+    // MQTT测试功能已删除
     
     fun cleanup() {
         try {

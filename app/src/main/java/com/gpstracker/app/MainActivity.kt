@@ -135,9 +135,7 @@ class MainActivity : AppCompatActivity() {
             SimpleDebugActivity.start(this)
         }
         
-        binding.testMqttButton.setOnClickListener {
-            testMqttConnection()
-        }
+        // MQTT测试功能已删除
         
         binding.checkAccuracyButton.setOnClickListener {
             checkGpsAccuracyStatus()
@@ -295,7 +293,7 @@ class MainActivity : AppCompatActivity() {
             TrackingState.OUTDOOR -> "室外模式"
             TrackingState.ACTIVE -> "活跃状态"
             TrackingState.DRIVING -> "驾驶状态"
-            TrackingState.DEEP_STATIONARY -> "深度静止模式"
+            TrackingState.DEEP_STATIONARY -> "深度静止模式 (省电中)"
             null -> if (isTracking) "跟踪中..." else "已停止"
         }
         
@@ -313,15 +311,11 @@ class MainActivity : AppCompatActivity() {
         
         binding.statusText.setTextColor(ContextCompat.getColor(this, stateColor))
         
-        // 更新后台服务状态
-        val serviceStatus = if (isTracking && isServiceRunning()) "运行中" else "未运行"
-        binding.serviceStatusText.text = serviceStatus
-        binding.serviceStatusText.setTextColor(
-            ContextCompat.getColor(this, if (isTracking && isServiceRunning()) android.R.color.holo_green_dark else android.R.color.holo_red_dark)
-        )
+        // 隐藏后台服务状态显示
+        binding.serviceStatusText.visibility = android.view.View.GONE
         
-        // 更新步数统计
-        binding.stepCountText.text = stepCount.toString()
+        // 隐藏步数统计显示
+        binding.stepCountText.visibility = android.view.View.GONE
         
         // 更新已保存点数
         updateSavedPointsCount()
@@ -332,9 +326,8 @@ class MainActivity : AppCompatActivity() {
         // 更新最后位置信息
         updateLastLocationInfo()
         
-        // 更新行程信息
-        updateTripInfo(currentTripId, isTripActive)
-        
+        // 隐藏行程信息显示
+        // updateTripInfo(currentTripId, isTripActive)
         
         // 更新MQTT状态
         updateMqttStatus(mqttStatus)
@@ -522,29 +515,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     
-    private fun testMqttConnection() {
-        if (isTracking) {
-            val serviceIntent = Intent(this, GpsTrackingService::class.java)
-            try {
-                val serviceConnection = object : android.content.ServiceConnection {
-                    override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
-                        service?.let {
-                            val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
-                            gpsService.testMqttConnection()
-                            Toast.makeText(this@MainActivity, "MQTT连接测试已开始，请查看日志", Toast.LENGTH_SHORT).show()
-                            unbindService(this)
-                        }
-                    }
-                    override fun onServiceDisconnected(name: android.content.ComponentName?) {}
-                }
-                bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
-            } catch (e: Exception) {
-                Toast.makeText(this, "测试MQTT连接失败: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        } else {
-            Toast.makeText(this, "请先启动GPS跟踪", Toast.LENGTH_SHORT).show()
-        }
-    }
+    // MQTT测试功能已删除
     
     private fun checkGpsAccuracyStatus() {
         val accuracyOptimizer = GpsAccuracyOptimizer(this)

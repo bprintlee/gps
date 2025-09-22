@@ -369,16 +369,7 @@ class MqttManager(private val context: Context) {
     /**
      * 清理资源
      */
-    /**
-     * 测试MQTT连接
-     */
-    fun testConnection() {
-        if (Build.VERSION.SDK_INT >= 35) {
-            android15CompatibleManager?.testConnection()
-        } else {
-            Log.d("MqttManager", "标准MQTT管理器不支持测试连接")
-        }
-    }
+    // MQTT测试功能已删除
     
     fun cleanup() {
         try {

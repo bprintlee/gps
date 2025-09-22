@@ -82,6 +82,14 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private var deepStationaryEntryTime = 0L // 进入深度静止状态的时间
     private var totalDeepStationaryTime = 0L // 累计深度静止时间
     
+    // 驾驶状态检测配置
+    private val drivingSpeedThreshold = 7.0f // 7km/h速度阈值进入驾驶模式
+    private val drivingStationaryTimeoutMs = 300000L // 5分钟无移动退出驾驶模式
+    private val drivingStationaryDistanceThreshold = 100.0f // 100米距离阈值
+    private var drivingEntryTime = 0L // 进入驾驶状态的时间
+    private var drivingLastLocation: Location? = null // 驾驶状态下的最后位置
+    private var isInDrivingMode = false // 是否处于驾驶模式
+    
     // 省电模式配置 - 默认开启省电模式
     private var isPowerSaveMode = true
     private var gpsUpdateInterval = 10000L // 默认10秒间隔（省电模式）
@@ -388,10 +396,25 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 isGpsAvailable = true
                 lastMovementTime = currentTime
             }
-            lastAcceleration > accelerationThreshold -> {
+            // 检查是否应该进入驾驶状态（基于速度）
+            shouldEnterDrivingMode() -> {
                 currentState = TrackingState.DRIVING
                 isGpsAvailable = true
                 lastMovementTime = currentTime
+                isInDrivingMode = true
+                drivingEntryTime = currentTime
+                drivingLastLocation = lastLocation
+                android.util.Log.d("GpsTrackingService", "进入驾驶状态 - 速度: ${lastLocation?.speed?.times(3.6f)} km/h")
+            }
+            
+            // 检查是否应该退出驾驶状态（基于距离和时间）
+            shouldExitDrivingMode() -> {
+                currentState = TrackingState.INDOOR
+                isInDrivingMode = false
+                lastMovementTime = currentTime
+                android.util.Log.d("GpsTrackingService", "退出驾驶状态 - 进行环境检测")
+                // 重新启动GPS更新并进行环境检测
+                startLocationUpdates()
             }
             isGpsAvailable -> {
                 currentState = TrackingState.OUTDOOR
@@ -412,6 +435,48 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         // 移除自动行程管理逻辑，改为手动控制
         // 行程的开始和结束完全由用户控制
         android.util.Log.d("GpsTrackingService", "状态变化: $previousState -> $newState, 当前行程: $currentTripId, 活跃: $isTripActive")
+    }
+    
+    /**
+     * 检查是否应该进入驾驶模式
+     */
+    private fun shouldEnterDrivingMode(): Boolean {
+        return !isInDrivingMode && 
+               lastLocation != null && 
+               lastLocation!!.hasSpeed() && 
+               lastLocation!!.speed * 3.6f >= drivingSpeedThreshold // 转换为km/h
+    }
+    
+    /**
+     * 检查是否应该退出驾驶模式
+     */
+    private fun shouldExitDrivingMode(): Boolean {
+        if (!isInDrivingMode) return false
+        
+        val currentTime = System.currentTimeMillis()
+        val timeInDriving = currentTime - drivingEntryTime
+        
+        // 如果驾驶时间超过5分钟
+        if (timeInDriving > drivingStationaryTimeoutMs) {
+            // 检查移动距离
+            val distance = if (drivingLastLocation != null && lastLocation != null) {
+                drivingLastLocation!!.distanceTo(lastLocation!!)
+            } else {
+                Float.MAX_VALUE
+            }
+            
+            // 如果移动距离小于100米，退出驾驶模式
+            if (distance < drivingStationaryDistanceThreshold) {
+                android.util.Log.d("GpsTrackingService", "驾驶模式超时且移动距离不足 - 距离: ${distance}m, 时间: ${timeInDriving/1000}秒")
+                return true
+            } else {
+                // 更新驾驶状态下的最后位置
+                drivingLastLocation = lastLocation
+                drivingEntryTime = currentTime
+            }
+        }
+        
+        return false
     }
     
     private fun startNewTrip() {
@@ -484,10 +549,16 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         }
         
         // 尝试发送到MQTT服务器（失败不影响GPS跟踪功能）
-        try {
-            mqttManager.publishLocation(gpsData)
-        } catch (e: Exception) {
-            android.util.Log.w("GpsTrackingService", "MQTT发送失败，继续GPS跟踪功能", e)
+        // 只有精度小于60米的位置才发送MQTT消息
+        if (location.accuracy < 60.0f) {
+            try {
+                mqttManager.publishLocation(gpsData)
+                android.util.Log.d("GpsTrackingService", "MQTT位置发送成功 - 精度: ${location.accuracy}m")
+            } catch (e: Exception) {
+                android.util.Log.w("GpsTrackingService", "MQTT发送失败，继续GPS跟踪功能", e)
+            }
+        } else {
+            android.util.Log.d("GpsTrackingService", "位置精度不足，跳过MQTT发送 - 精度: ${location.accuracy}m")
         }
         
         // 根据模式调整保存频率
@@ -770,14 +841,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         }
     }
     
-        fun testMqttConnection() {
-            try {
-                android.util.Log.d("GpsTrackingService", "开始测试MQTT连接...")
-                mqttManager.testConnection()
-            } catch (e: Exception) {
-                android.util.Log.e("GpsTrackingService", "测试MQTT连接失败", e)
-            }
-        }
+    // MQTT测试功能已删除
         
     
     // 手动切换省电模式
