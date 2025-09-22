@@ -105,7 +105,7 @@ object GlobalBroadcastReceiverFix {
             
             // 尝试找到并修复MQTT相关的类
             val mqttServiceClass = try {
-                Class.forName("info.mqtt.android.service.MqttService")
+                Class.forName("org.eclipse.paho.android.service.MqttService")
             } catch (e: ClassNotFoundException) {
                 Log.d(TAG, "未找到MqttService类")
                 return
