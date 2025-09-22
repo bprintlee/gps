@@ -19,6 +19,11 @@ class MqttManager(private val context: Context) {
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val logManager = LogManager(context)
     
+    // Android 15兼容的MQTT管理器
+    private val android15CompatibleManager = if (Build.VERSION.SDK_INT >= 35) {
+        Android15CompatibleMqttManager(context)
+    } else null
+    
     // MQTT配置
     private val serverUri = "tcp://8.153.37.172:1883"
     private val topic = "owntracks/#"
@@ -39,6 +44,12 @@ class MqttManager(private val context: Context) {
         logManager.saveLog("MqttManager", "DEBUG", "开始MQTT连接流程")
         
         try {
+            // Android 15兼容性处理
+            if (Build.VERSION.SDK_INT >= 35) {
+                Log.w("MqttManager", "检测到Android 15，使用兼容的MQTT管理器")
+                android15CompatibleManager?.connect()
+                return
+            }
             
             // 检查网络连接
             if (!isNetworkAvailable()) {
@@ -188,6 +199,13 @@ class MqttManager(private val context: Context) {
                 Log.d("MqttManager", "Android版本: ${Build.VERSION.SDK_INT}")
                 Log.d("MqttManager", "位置数据: lat=${gpsData.latitude}, lon=${gpsData.longitude}, acc=${gpsData.accuracy}")
                 
+                // Android 15兼容性处理
+                if (Build.VERSION.SDK_INT >= 35) {
+                    Log.w("MqttManager", "检测到Android 15，使用兼容的MQTT管理器发布位置")
+                    android15CompatibleManager?.publishLocation(gpsData)
+                    return@launch
+                }
+                
                 if (!isNetworkAvailable()) {
                     Log.w("MqttManager", "网络不可用，跳过位置数据发送")
                     return@launch
@@ -274,7 +292,11 @@ class MqttManager(private val context: Context) {
     
     fun isConnected(): Boolean {
         return try {
-            mqttClient?.isConnected == true
+            if (Build.VERSION.SDK_INT >= 35) {
+                android15CompatibleManager?.isConnected() == true
+            } else {
+                mqttClient?.isConnected == true
+            }
         } catch (e: Exception) {
             Log.e("MqttManager", "检查连接状态异常", e)
             false
@@ -286,10 +308,14 @@ class MqttManager(private val context: Context) {
      */
     fun getConnectionInfo(): String {
         return try {
-            when {
-                isConnecting -> "连接中..."
-                isConnected() -> "已连接"
-                else -> lastConnectionState
+            if (Build.VERSION.SDK_INT >= 35) {
+                android15CompatibleManager?.getConnectionInfo() ?: "Android 15兼容模式"
+            } else {
+                when {
+                    isConnecting -> "连接中..."
+                    isConnected() -> "已连接"
+                    else -> lastConnectionState
+                }
             }
         } catch (e: Exception) {
             "状态未知"
@@ -301,20 +327,24 @@ class MqttManager(private val context: Context) {
      */
     fun getDetailedState(): String {
         return try {
-            val state = StringBuilder()
-            state.appendLine("=== MQTT详细状态 ===")
-            state.appendLine("Android版本: ${Build.VERSION.SDK_INT}")
-            state.appendLine("连接状态: ${getConnectionInfo()}")
-            state.appendLine("是否连接中: $isConnecting")
-            state.appendLine("连接尝试次数: $connectionAttempts")
-            state.appendLine("最后连接尝试: ${if (lastConnectAttempt > 0) java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(Date(lastConnectAttempt)) else "无"}")
-            state.appendLine("服务器URI: $serverUri")
-            state.appendLine("客户端ID: $clientId")
-            state.appendLine("主题: $topic")
-            state.appendLine("最后错误: ${lastError?.message ?: "无"}")
-            state.appendLine("最后错误类型: ${lastError?.javaClass?.simpleName ?: "无"}")
-            state.appendLine("网络可用: ${isNetworkAvailable()}")
-            state.toString()
+            if (Build.VERSION.SDK_INT >= 35) {
+                android15CompatibleManager?.getDetailedState() ?: "Android 15兼容模式状态获取失败"
+            } else {
+                val state = StringBuilder()
+                state.appendLine("=== MQTT详细状态 ===")
+                state.appendLine("Android版本: ${Build.VERSION.SDK_INT}")
+                state.appendLine("连接状态: ${getConnectionInfo()}")
+                state.appendLine("是否连接中: $isConnecting")
+                state.appendLine("连接尝试次数: $connectionAttempts")
+                state.appendLine("最后连接尝试: ${if (lastConnectAttempt > 0) java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(Date(lastConnectAttempt)) else "无"}")
+                state.appendLine("服务器URI: $serverUri")
+                state.appendLine("客户端ID: $clientId")
+                state.appendLine("主题: $topic")
+                state.appendLine("最后错误: ${lastError?.message ?: "无"}")
+                state.appendLine("最后错误类型: ${lastError?.javaClass?.simpleName ?: "无"}")
+                state.appendLine("网络可用: ${isNetworkAvailable()}")
+                state.toString()
+            }
         } catch (e: Exception) {
             Log.e("MqttManager", "获取详细状态失败", e)
             "状态获取失败: ${e.message}"
@@ -327,7 +357,11 @@ class MqttManager(private val context: Context) {
      */
     fun cleanup() {
         try {
-            disconnect()
+            if (Build.VERSION.SDK_INT >= 35) {
+                android15CompatibleManager?.cleanup()
+            } else {
+                disconnect()
+            }
             serviceScope.cancel()
         } catch (e: Exception) {
             Log.e("MqttManager", "清理资源异常", e)
