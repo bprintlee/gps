@@ -89,11 +89,14 @@ dependencies {
     implementation 'androidx.work:work-runtime-ktx:2.9.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
     implementation 'com.google.android.gms:play-services-maps:18.2.0'
-    // MQTT依赖 - 使用最新兼容Android 15的版本
+    // MQTT依赖 - 尝试使用官方Eclipse Paho库的最新版本
     implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5'
-    implementation 'com.github.hannesa2:paho.mqtt.android:3.3.5'
+    implementation 'org.eclipse.paho:org.eclipse.paho.android.service:1.1.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
+    
+    // 备用：如果官方库有问题，可以切换回hannesa2版本
+    // implementation 'com.github.hannesa2:paho.mqtt.android:3.3.5'
     
     // 网络和安全相关依赖
     implementation 'androidx.work:work-runtime-ktx:2.9.0'

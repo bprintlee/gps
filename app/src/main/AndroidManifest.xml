@@ -89,14 +89,27 @@
             tools:targetApi="29"
             android:foregroundServiceType="location" />
         
-        <!-- MQTT服务 - 使用兼容Android 15的版本 -->
+        <!-- MQTT服务 - 使用官方Eclipse Paho库 -->
         <service
-            android:name="info.mqtt.android.service.MqttService"
+            android:name="org.eclipse.paho.android.service.MqttService"
             android:enabled="true"
             android:exported="false" />
             
-        <!-- 注意：hannesa2 MQTT库的BroadcastReceiver是内部动态注册的，
-             不需要在AndroidManifest.xml中显式声明 -->
+        <!-- MQTT BroadcastReceiver - 官方Eclipse Paho库的接收器 -->
+        <receiver
+            android:name="org.eclipse.paho.android.service.AlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+            
+        <receiver
+            android:name="org.eclipse.paho.android.service.MqttService$MqttReceiver"
+            android:enabled="true"
+            android:exported="false" />
+            
+        <receiver
+            android:name="org.eclipse.paho.android.service.MqttService$NetworkStateReceiver"
+            android:enabled="true"
+            android:exported="false" />
             
     </application>
 

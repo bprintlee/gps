@@ -8,6 +8,7 @@ import android.os.Build
 import android.util.Log
 import com.gpstracker.app.utils.CrashHandler
 import com.gpstracker.app.utils.EnhancedCrashHandler
+import com.gpstracker.app.utils.GlobalBroadcastReceiverFix
 
 class GPSTrackerApplication : Application() {
     
@@ -16,6 +17,10 @@ class GPSTrackerApplication : Application() {
         Log.d("GPSTrackerApp", "=== Application onCreate ===")
         
         try {
+            // 应用全局BroadcastReceiver修复（Android 15兼容性）
+            GlobalBroadcastReceiverFix.applyGlobalFix(this)
+            Log.d("GPSTrackerApp", "全局BroadcastReceiver修复应用完成")
+            
             // 初始化增强版崩溃处理器
             EnhancedCrashHandler.getInstance(this)
             Log.d("GPSTrackerApp", "增强版崩溃处理器初始化完成")
@@ -27,8 +32,6 @@ class GPSTrackerApplication : Application() {
             // 确保应用上下文正确初始化
             val packageInfo = packageManager.getPackageInfo(packageName, 0)
             Log.d("GPSTrackerApp", "包信息加载成功: ${packageInfo.versionName}")
-            
-            // Android 15兼容性处理已移至MqttManager
             
             Log.d("GPSTrackerApp", "=== Application初始化完成 ===")
         } catch (e: Exception) {
