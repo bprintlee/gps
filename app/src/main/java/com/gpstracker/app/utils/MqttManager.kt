@@ -26,7 +26,7 @@ class MqttManager(private val context: Context) {
     
     // MQTT配置
     private val serverUri = "tcp://8.153.37.172:1883"
-    private val topic = "owntracks/#"
+    private val topic = "owntracks/user/bprint"
     private val clientId = "gps_tracker_${UUID.randomUUID().toString().substring(0, 8)}"
     
     // 连接状态
