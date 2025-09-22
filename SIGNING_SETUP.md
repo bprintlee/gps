@@ -5,34 +5,39 @@
 
 ## 快速解决方案
 
-### 方法1: 复制Android SDK默认keystore（最简单）
+### 方法1: 使用Android SDK默认keystore（推荐）
 
-如果您有Android SDK，直接复制默认的调试keystore：
+项目现在配置为使用Android SDK的默认debug keystore，无需额外配置。
 
-**Windows:**
-```cmd
-copy "%USERPROFILE%\.android\debug.keystore" "keystore\debug.keystore"
+**Windows默认位置:**
+```
+%USERPROFILE%\.android\debug.keystore
 ```
 
-**Linux/macOS:**
+**Linux/macOS默认位置:**
+```
+~/.android/debug.keystore
+```
+
+### 方法2: 手动创建keystore（如果需要）
+
+如果您需要创建自定义keystore，请确保使用正确的命令：
+
 ```bash
-cp ~/.android/debug.keystore keystore/debug.keystore
+keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
 ```
 
-### 方法2: 手动创建keystore
-
-如果您有Java环境，在项目根目录运行：
-
-```bash
-keytool -genkey -v -keystore keystore/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
-```
+**重要提醒：**
+- 确保使用Java 8或更高版本
+- 不要使用过时的keystore格式
+- 如果遇到"Tag number over 30"错误，请删除旧的keystore文件重新创建
 
 ### 方法3: 使用Android Studio
 
 1. 打开Android Studio
 2. 进入 Build → Generate Signed Bundle/APK
 3. 选择 "Create new keystore"
-4. 保存到 `keystore/debug.keystore`
+4. 保存到项目目录
 5. 使用以下信息：
    - 密码: `android`
    - 别名: `androiddebugkey`
