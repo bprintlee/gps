@@ -25,6 +25,19 @@ class Android15CompatibleMqttClient(
     private val appContext = context.applicationContext
     
     /**
+     * 实现抽象方法removeMessage
+     */
+    override fun removeMessage(token: IMqttDeliveryToken?): Boolean {
+        return try {
+            // 简单的实现，返回true表示成功
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "移除消息失败", e)
+            false
+        }
+    }
+    
+    /**
      * 重写registerReceiver方法以支持Android 15
      */
     override fun registerReceiver(receiver: android.content.BroadcastReceiver?, filter: IntentFilter?): Intent? {
