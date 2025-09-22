@@ -578,6 +578,15 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         }
     }
     
+    fun testMqttConnection() {
+        try {
+            android.util.Log.d("GpsTrackingService", "开始测试MQTT连接...")
+            mqttManager.testConnection()
+        } catch (e: Exception) {
+            android.util.Log.e("GpsTrackingService", "测试MQTT连接失败", e)
+        }
+    }
+    
     // 手动切换省电模式
     fun togglePowerSaveMode() {
         isPowerSaveMode = !isPowerSaveMode

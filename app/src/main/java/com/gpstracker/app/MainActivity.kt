@@ -132,6 +132,10 @@ class MainActivity : AppCompatActivity() {
         binding.debugButton.setOnClickListener {
             SimpleDebugActivity.start(this)
         }
+        
+        binding.testMqttButton.setOnClickListener {
+            testMqttConnection()
+        }
     }
     
     private fun checkPermissionsAndStartTracking() {
@@ -508,6 +512,30 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
+    
+    private fun testMqttConnection() {
+        if (isTracking) {
+            val serviceIntent = Intent(this, GpsTrackingService::class.java)
+            try {
+                val serviceConnection = object : android.content.ServiceConnection {
+                    override fun onServiceConnected(name: android.content.ComponentName?, service: android.os.IBinder?) {
+                        service?.let {
+                            val gpsService = (it as GpsTrackingService.GpsTrackingBinder).getService()
+                            gpsService.testMqttConnection()
+                            Toast.makeText(this@MainActivity, "MQTT连接测试已开始，请查看日志", Toast.LENGTH_SHORT).show()
+                            unbindService(this)
+                        }
+                    }
+                    override fun onServiceDisconnected(name: android.content.ComponentName?) {}
+                }
+                bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+            } catch (e: Exception) {
+                Toast.makeText(this, "测试MQTT连接失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "请先启动GPS跟踪", Toast.LENGTH_SHORT).show()
+        }
+    }
     
     private fun updateMqttStatus(mqttStatus: String?) {
         val status = mqttStatus ?: "未知"

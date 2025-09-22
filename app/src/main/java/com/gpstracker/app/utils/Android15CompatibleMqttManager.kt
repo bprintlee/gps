@@ -24,7 +24,7 @@ class Android15CompatibleMqttManager(private val context: Context) {
     
     // MQTT配置
     private val serverUri = "tcp://8.153.37.172:1883"
-    private val topic = "owntracks/#"
+    private val topic = "owntracks/L"  // 使用具体的主题而不是通配符
     private val clientId = "gps_tracker_${UUID.randomUUID().toString().substring(0, 8)}"
     
     // 连接状态
@@ -39,6 +39,9 @@ class Android15CompatibleMqttManager(private val context: Context) {
     
     fun connect() {
         Log.d("Android15CompatibleMqttManager", "=== 开始MQTT连接流程 ===")
+        Log.d("Android15CompatibleMqttManager", "服务器URI: $serverUri")
+        Log.d("Android15CompatibleMqttManager", "客户端ID: $clientId")
+        Log.d("Android15CompatibleMqttManager", "主题: $topic")
         logManager.saveLog("Android15CompatibleMqttManager", "DEBUG", "开始MQTT连接流程")
         
         try {
@@ -99,19 +102,25 @@ class Android15CompatibleMqttManager(private val context: Context) {
             })
             
             // 尝试连接
+            Log.d("Android15CompatibleMqttManager", "开始尝试MQTT连接...")
             mqttClient?.connect(options, null, object : IMqttActionListener {
                 override fun onSuccess(asyncActionToken: IMqttToken?) {
-                    Log.d("Android15CompatibleMqttManager", "MQTT连接成功")
+                    Log.d("Android15CompatibleMqttManager", "✅ MQTT连接成功！")
+                    Log.d("Android15CompatibleMqttManager", "连接令牌: ${asyncActionToken?.messageId}")
                     lastConnectionState = "已连接"
                     lastError = null
                     isConnecting = false
+                    logManager.saveLog("Android15CompatibleMqttManager", "INFO", "MQTT连接成功")
                 }
                 
                 override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                    Log.e("Android15CompatibleMqttManager", "MQTT连接失败", exception)
+                    Log.e("Android15CompatibleMqttManager", "❌ MQTT连接失败", exception)
+                    Log.e("Android15CompatibleMqttManager", "失败原因: ${exception?.message}")
+                    Log.e("Android15CompatibleMqttManager", "异常类型: ${exception?.javaClass?.simpleName}")
                     lastConnectionState = "连接失败"
                     lastError = exception
                     isConnecting = false
+                    logManager.saveLog("Android15CompatibleMqttManager", "ERROR", "MQTT连接失败: ${exception?.message}")
                 }
             })
             
@@ -277,6 +286,70 @@ class Android15CompatibleMqttManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e("Android15CompatibleMqttManager", "获取详细状态失败", e)
             "状态获取失败: ${e.message}"
+        }
+    }
+    
+    /**
+     * 测试MQTT连接并发送测试消息
+     */
+    fun testConnection() {
+        serviceScope.launch {
+            try {
+                Log.d("Android15CompatibleMqttManager", "=== 开始测试MQTT连接 ===")
+                
+                if (!isNetworkAvailable()) {
+                    Log.w("Android15CompatibleMqttManager", "网络不可用，无法测试连接")
+                    return@launch
+                }
+                
+                // 如果未连接，先连接
+                if (!isConnected()) {
+                    Log.d("Android15CompatibleMqttManager", "未连接，先建立连接...")
+                    connect()
+                    
+                    // 等待连接建立
+                    var retryCount = 0
+                    val maxRetries = 10
+                    while (retryCount < maxRetries && !isConnected()) {
+                        Log.d("Android15CompatibleMqttManager", "等待连接建立... (${retryCount + 1}/$maxRetries)")
+                        delay(1000)
+                        retryCount++
+                    }
+                }
+                
+                if (isConnected()) {
+                    Log.d("Android15CompatibleMqttManager", "连接已建立，发送测试消息...")
+                    
+                    val testMessage = """
+                    {
+                      "_type": "test",
+                      "message": "MQTT连接测试",
+                      "timestamp": ${System.currentTimeMillis() / 1000},
+                      "clientId": "$clientId"
+                    }
+                    """.trimIndent()
+                    
+                    val mqttMessage = MqttMessage(testMessage.toByteArray())
+                    mqttMessage.qos = 1
+                    
+                    mqttClient?.publish(topic, mqttMessage, null, object : IMqttActionListener {
+                        override fun onSuccess(asyncActionToken: IMqttToken?) {
+                            Log.d("Android15CompatibleMqttManager", "✅ 测试消息发送成功！")
+                            Log.d("Android15CompatibleMqttManager", "消息ID: ${asyncActionToken?.messageId}")
+                        }
+                        
+                        override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
+                            Log.e("Android15CompatibleMqttManager", "❌ 测试消息发送失败", exception)
+                            Log.e("Android15CompatibleMqttManager", "失败原因: ${exception?.message}")
+                        }
+                    })
+                } else {
+                    Log.w("Android15CompatibleMqttManager", "⚠️ 连接建立失败，无法发送测试消息")
+                }
+                
+            } catch (e: Exception) {
+                Log.e("Android15CompatibleMqttManager", "测试连接异常", e)
+            }
         }
     }
     
