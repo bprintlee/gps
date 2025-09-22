@@ -21,10 +21,14 @@ class Android15CompatibleMqttManager(private val context: Context) {
     private var mqttClient: MqttAndroidClient? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val logManager = LogManager(context)
+    private val mqttReceiverManager = MqttBroadcastReceiverManager(context)
     
     init {
         // 应用Android 15兼容性修复
         Android15MqttFix.applyMqttLibraryFix()
+        
+        // 注册MQTT相关的BroadcastReceiver
+        mqttReceiverManager.registerMqttReceivers()
     }
     
     // MQTT配置
@@ -361,6 +365,7 @@ class Android15CompatibleMqttManager(private val context: Context) {
     fun cleanup() {
         try {
             disconnect()
+            mqttReceiverManager.unregisterAllReceivers()
             serviceScope.cancel()
         } catch (e: Exception) {
             Log.e("Android15CompatibleMqttManager", "清理资源异常", e)
