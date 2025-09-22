@@ -135,11 +135,7 @@ class MainActivity : AppCompatActivity() {
             SimpleDebugActivity.start(this)
         }
         
-        // MQTT测试功能已删除
-        
-        binding.checkAccuracyButton.setOnClickListener {
-            checkGpsAccuracyStatus()
-        }
+        // MQTT测试功能和GPS精度检查功能已删除
         
     }
     
@@ -292,7 +288,7 @@ class MainActivity : AppCompatActivity() {
             TrackingState.INDOOR -> "室内模式"
             TrackingState.OUTDOOR -> "室外模式"
             TrackingState.ACTIVE -> "活跃状态"
-            TrackingState.DRIVING -> "驾驶状态"
+            TrackingState.DRIVING -> "驾驶模式 (基于速度检测)"
             TrackingState.DEEP_STATIONARY -> "深度静止模式 (省电中)"
             null -> if (isTracking) "跟踪中..." else "已停止"
         }
@@ -517,25 +513,7 @@ class MainActivity : AppCompatActivity() {
     
     // MQTT测试功能已删除
     
-    private fun checkGpsAccuracyStatus() {
-        val accuracyOptimizer = GpsAccuracyOptimizer(this)
-        val status = accuracyOptimizer.checkGpsAccuracy()
-        val tips = accuracyOptimizer.getAccuracyOptimizationTips()
-        
-        val statusMessage = buildString {
-            appendLine("GPS精度状态:")
-            appendLine("GPS: ${if (status.isGpsEnabled) "已启用" else "未启用"}")
-            appendLine("网络定位: ${if (status.isNetworkEnabled) "已启用" else "未启用"}")
-            appendLine("推荐模式: ${status.recommendedMode}")
-            appendLine("")
-            appendLine("优化建议:")
-            tips.forEach { tip ->
-                appendLine("• $tip")
-            }
-        }
-        
-        Toast.makeText(this, statusMessage, Toast.LENGTH_LONG).show()
-    }
+    // GPS精度检查功能已删除
     
     
     private fun updateMqttStatus(mqttStatus: String?) {

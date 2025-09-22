@@ -201,6 +201,12 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     private fun startLocationUpdates() {
         try {
+            // 深度静止状态下完全停止位置更新
+            if (isInDeepStationary) {
+                android.util.Log.d("GpsTrackingService", "深度静止状态，跳过位置更新")
+                return
+            }
+            
             // 检查是否需要重新检测环境
             val currentTime = System.currentTimeMillis()
             val shouldCheckEnvironment = (currentTime - lastEnvironmentCheck) > environmentCheckInterval
