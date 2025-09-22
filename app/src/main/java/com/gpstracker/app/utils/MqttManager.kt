@@ -190,9 +190,14 @@ class MqttManager(private val context: Context) {
     fun publishLocation(gpsData: GpsData) {
         serviceScope.launch {
             try {
+                Log.d("MqttManager", "=== 开始发布位置数据 ===")
+                Log.d("MqttManager", "Android版本: ${Build.VERSION.SDK_INT}")
+                Log.d("MqttManager", "位置数据: lat=${gpsData.latitude}, lon=${gpsData.longitude}, acc=${gpsData.accuracy}")
+                
                 // Android 15兼容性处理 - 跳过MQTT发布
                 if (Build.VERSION.SDK_INT >= 35) {
-                    Log.d("MqttManager", "Android 15兼容性：跳过MQTT位置数据发布")
+                    Log.w("MqttManager", "Android 15兼容性：跳过MQTT位置数据发布")
+                    Log.w("MqttManager", "原因: 避免BroadcastReceiver注册问题")
                     return@launch
                 }
                 
@@ -201,26 +206,36 @@ class MqttManager(private val context: Context) {
                     return@launch
                 }
                 
+                Log.d("MqttManager", "MQTT客户端状态: ${mqttClient?.isConnected}")
+                Log.d("MqttManager", "服务器URI: $serverUri")
+                Log.d("MqttManager", "主题: $topic")
+                
                 if (mqttClient?.isConnected == true) {
                     val message = createLocationMessage(gpsData)
+                    Log.d("MqttManager", "准备发送的消息: $message")
+                    
                     val mqttMessage = MqttMessage(message.toByteArray())
                     mqttMessage.qos = 1
                     
                     mqttClient?.publish(topic, mqttMessage, null, object : IMqttActionListener {
                         override fun onSuccess(asyncActionToken: IMqttToken?) {
-                            Log.d("MqttManager", "位置数据发送成功: ${gpsData.latitude}, ${gpsData.longitude}")
+                            Log.d("MqttManager", "✅ 位置数据发送成功: ${gpsData.latitude}, ${gpsData.longitude}")
+                            Log.d("MqttManager", "发送到主题: $topic")
                         }
                         
                         override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                            Log.e("MqttManager", "位置数据发送失败", exception)
+                            Log.e("MqttManager", "❌ 位置数据发送失败", exception)
+                            Log.e("MqttManager", "失败原因: ${exception?.message}")
                             // 发送失败时尝试重新连接
                             if (!isConnected()) {
+                                Log.w("MqttManager", "尝试重新连接MQTT")
                                 connect()
                             }
                         }
                     })
                 } else {
-                    Log.w("MqttManager", "MQTT未连接，尝试重新连接")
+                    Log.w("MqttManager", "⚠️ MQTT未连接，尝试重新连接")
+                    Log.w("MqttManager", "连接状态: ${getConnectionInfo()}")
                     connect()
                 }
             } catch (e: Exception) {
