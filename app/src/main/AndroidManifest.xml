@@ -93,20 +93,7 @@
             android:exported="false" />
             
         <!-- MQTT BroadcastReceiver - Android 15兼容性修复 -->
-        <receiver
-            android:name="info.mqtt.android.service.AlarmReceiver"
-            android:enabled="true"
-            android:exported="false" />
-            
-        <receiver
-            android:name="info.mqtt.android.service.MqttService$MqttReceiver"
-            android:enabled="true"
-            android:exported="false" />
-            
-        <receiver
-            android:name="info.mqtt.android.service.MqttService$NetworkStateReceiver"
-            android:enabled="true"
-            android:exported="false" />
+        <!-- 注意：hannesa2 MQTT库可能不需要额外的BroadcastReceiver声明 -->
             
     </application>
 
