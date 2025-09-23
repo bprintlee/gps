@@ -98,7 +98,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private var isInDrivingMode = false // 是否处于驾驶模式
     
     // 省电模式配置 - 从SettingsManager动态读取
-    private fun isPowerSaveMode()() = SettingsManager.isPowerSaveMode()(this)
+    private fun isPowerSaveMode() = SettingsManager.isPowerSaveMode(this)
     private fun getGpsUpdateInterval() = SettingsManager.getGpsUpdateInterval(this)
     private var sensorUpdateInterval = SensorManager.SENSOR_DELAY_UI // 默认UI延迟
     private fun getStateCheckInterval() = SettingsManager.getStateCheckInterval(this)
@@ -338,11 +338,11 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         // 不再检查系统省电模式，使用应用内省电模式设置
         // 根据省电模式调整参数
         if (isPowerSaveMode()) {
-            getGpsUpdateInterval() = 5000L // 省电模式：5秒间隔（减少间隔以提高响应速度）
-            getStateCheckInterval() = 5000L // 省电模式：5秒检查一次（减少间隔）
+            // 省电模式：使用设置中的间隔
+            android.util.Log.d("GpsTrackingService", "省电模式已启用")
         } else {
-            getGpsUpdateInterval() = 3000L // 持续记录模式：3秒间隔
-            getStateCheckInterval() = 3000L // 持续记录模式：3秒检查一次
+            // 持续记录模式：使用设置中的间隔
+            android.util.Log.d("GpsTrackingService", "省电模式已禁用")
         }
     }
     
@@ -884,7 +884,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     fun isGpsAvailable(): Boolean = isGpsAvailable
     fun getStepCount(): Int = stepCount
     fun getLastAcceleration(): Float = lastAcceleration
-    fun isPowerSaveMode()(): Boolean = isPowerSaveMode()
+    fun isPowerSaveMode(): Boolean = isPowerSaveMode()
     fun getLastLocation(): Location? = lastLocation
     
      // 调试信息方法
@@ -1039,7 +1039,14 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     // 手动切换省电模式
     fun togglePowerSaveMode() {
-        isPowerSaveMode() = !isPowerSaveMode()
+        // 切换省电模式设置
+        val currentMode = isPowerSaveMode()
+        val newMode = !currentMode
+        
+        // 保存新设置到SharedPreferences
+        val sharedPreferences = getSharedPreferences("gps_tracking_settings", Context.MODE_PRIVATE)
+        sharedPreferences.edit().putBoolean("power_save_mode", newMode).apply()
+        
         checkPowerSaveMode()
         
         // 重新启动位置更新以应用新设置
@@ -1049,6 +1056,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         // 重新启动传感器更新以应用新设置
         stopSensorUpdates()
         startSensorUpdates()
+        
+        android.util.Log.d("GpsTrackingService", "省电模式切换: $currentMode -> $newMode")
     }
     
     companion object {

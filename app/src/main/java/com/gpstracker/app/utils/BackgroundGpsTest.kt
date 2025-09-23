@@ -54,7 +54,7 @@ object BackgroundGpsTest {
                             debugInfo = gpsService.getDebugInfo()
                             
                             // MQTT连接信息
-                            mqttConnectionInfo = gpsService.getMqttConnectionInfo()
+                            mqttConnectionInfo = mapOf("connection_info" to gpsService.getMqttConnectionInfo())
                             
                             success = true
                             message = "后台GPS数据获取测试成功"
@@ -133,13 +133,13 @@ object BackgroundGpsTest {
                         // 获取指定行程的GPS数据
                         val gpsDataList = gpsService.getGpsDataByTripId(tripId)
                         
-                        val testResult = TripTestResult().apply {
-                            this.tripId = tripId
-                            gpsDataCount = gpsDataList.size
-                            gpsDataList = gpsDataList
-                            success = true
+                        val testResult = TripTestResult(
+                            tripId = tripId,
+                            gpsDataCount = gpsDataList.size,
+                            gpsDataList = gpsDataList,
+                            success = true,
                             message = "行程GPS数据获取成功，共${gpsDataList.size}个点"
-                        }
+                        )
                         
                         Log.d(TAG, "行程GPS测试结果: $testResult")
                         callback(testResult)
