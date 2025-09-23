@@ -271,16 +271,6 @@
             android:text="设置"
             android:textColor="@color/black"
             style="@style/Widget.Material3.Button.OutlinedButton" />
-            
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/detailedSettingsButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_weight="1"
-            android:text="详细设置"
-            android:textColor="@color/black"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
 
     </LinearLayout>
 

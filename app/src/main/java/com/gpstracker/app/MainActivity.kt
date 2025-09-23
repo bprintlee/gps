@@ -137,7 +137,7 @@ class MainActivity : AppCompatActivity() {
         }
         
         binding.settingsButton.setOnClickListener {
-            val intent = Intent(this, SettingsActivitySimple::class.java)
+            val intent = Intent(this, SettingsActivity::class.java)
             startActivity(intent)
         }
         
@@ -145,12 +145,6 @@ class MainActivity : AppCompatActivity() {
         binding.settingsButton.setOnLongClickListener {
             testBackgroundGpsFunctionality()
             true
-        }
-        
-        // 详细设置按钮
-        binding.detailedSettingsButton.setOnClickListener {
-            val intent = Intent(this, SettingsActivityDetailed::class.java)
-            startActivity(intent)
         }
         
         // MQTT测试功能和GPS精度检查功能已删除

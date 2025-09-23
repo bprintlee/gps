@@ -1,64 +1,61 @@
 package com.gpstracker.app
 
-import android.content.Context
-import android.content.SharedPreferences
 import android.os.Bundle
-import android.view.MenuItem
 import android.widget.SeekBar
 import android.widget.Switch
-import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import com.gpstracker.app.R
+import com.gpstracker.app.utils.SettingsManager
 
 class SettingsActivity : AppCompatActivity() {
     
-    private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var toolbar: Toolbar
     
-    // GPS超时设置
+    // 基本GPS设置
     private lateinit var gpsTimeoutSeekBar: SeekBar
-    private lateinit var gpsTimeoutValue: TextView
+    private lateinit var gpsTimeoutValue: android.widget.TextView
+    private lateinit var gpsUpdateIntervalSeekBar: SeekBar
+    private lateinit var gpsUpdateIntervalValue: android.widget.TextView
+    private lateinit var locationAccuracySeekBar: SeekBar
+    private lateinit var locationAccuracyValue: android.widget.TextView
+    private lateinit var mqttAccuracySeekBar: SeekBar
+    private lateinit var mqttAccuracyValue: android.widget.TextView
     
-    // 活跃状态设置
-    private lateinit var activeStateTimeoutSeekBar: SeekBar
-    private lateinit var activeStateTimeoutValue: TextView
-    private lateinit var activeStateDistanceSeekBar: SeekBar
-    private lateinit var activeStateDistanceValue: TextView
-    
-    // 步数阈值设置
-    private lateinit var stepThresholdSeekBar: SeekBar
-    private lateinit var stepThresholdValue: TextView
-    
-    // 加速度阈值设置
-    private lateinit var accelerationThresholdSeekBar: SeekBar
-    private lateinit var accelerationThresholdValue: TextView
+    // 状态转换阈值
+    private lateinit var indoorToOutdoorStepSeekBar: SeekBar
+    private lateinit var indoorToOutdoorStepValue: android.widget.TextView
+    private lateinit var indoorToOutdoorDistanceSeekBar: SeekBar
+    private lateinit var indoorToOutdoorDistanceValue: android.widget.TextView
+    private lateinit var outdoorToActiveStepSeekBar: SeekBar
+    private lateinit var outdoorToActiveStepValue: android.widget.TextView
+    private lateinit var outdoorToActiveDistanceSeekBar: SeekBar
+    private lateinit var outdoorToActiveDistanceValue: android.widget.TextView
+    private lateinit var activeToDrivingSpeedSeekBar: SeekBar
+    private lateinit var activeToDrivingSpeedValue: android.widget.TextView
     
     // 深度静止设置
     private lateinit var deepStationaryTimeoutSeekBar: SeekBar
-    private lateinit var deepStationaryTimeoutValue: TextView
+    private lateinit var deepStationaryTimeoutValue: android.widget.TextView
     private lateinit var deepStationaryStepSeekBar: SeekBar
-    private lateinit var deepStationaryStepValue: TextView
+    private lateinit var deepStationaryStepValue: android.widget.TextView
     private lateinit var deepStationaryAccelerationSeekBar: SeekBar
-    private lateinit var deepStationaryAccelerationValue: TextView
+    private lateinit var deepStationaryAccelerationValue: android.widget.TextView
     
     // 驾驶模式设置
     private lateinit var drivingSpeedSeekBar: SeekBar
-    private lateinit var drivingSpeedValue: TextView
+    private lateinit var drivingSpeedValue: android.widget.TextView
     private lateinit var drivingStationaryTimeoutSeekBar: SeekBar
-    private lateinit var drivingStationaryTimeoutValue: TextView
+    private lateinit var drivingStationaryTimeoutValue: android.widget.TextView
     private lateinit var drivingStationaryDistanceSeekBar: SeekBar
-    private lateinit var drivingStationaryDistanceValue: TextView
+    private lateinit var drivingStationaryDistanceValue: android.widget.TextView
     
-    // 环境检测设置
-    private lateinit var environmentCheckSeekBar: SeekBar
-    private lateinit var environmentCheckValue: TextView
-    
-    // 省电模式设置
-    private lateinit var powerSaveSwitch: Switch
-    private lateinit var gpsUpdateIntervalSeekBar: SeekBar
-    private lateinit var gpsUpdateIntervalValue: TextView
-    private lateinit var stateCheckIntervalSeekBar: SeekBar
-    private lateinit var stateCheckIntervalValue: TextView
+    // 其他设置
+    private lateinit var powerSaveModeSwitch: Switch
+    private lateinit var environmentCheckIntervalSeekBar: SeekBar
+    private lateinit var environmentCheckIntervalValue: android.widget.TextView
+    private lateinit var maxLocationHistorySeekBar: SeekBar
+    private lateinit var maxLocationHistoryValue: android.widget.TextView
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,17 +63,14 @@ class SettingsActivity : AppCompatActivity() {
         try {
             setContentView(R.layout.activity_settings)
             
-            // 设置工具栏
-            val toolbar = findViewById<Toolbar>(R.id.toolbar)
+            // 设置Toolbar
+            toolbar = findViewById(R.id.toolbar)
             setSupportActionBar(toolbar)
             supportActionBar?.setDisplayHomeAsUpEnabled(true)
-            supportActionBar?.title = "GPS跟踪设置"
-            
-            // 初始化SharedPreferences
-            sharedPreferences = getSharedPreferences("gps_tracking_settings", Context.MODE_PRIVATE)
+            supportActionBar?.title = "GPS设置"
             
             // 初始化视图
-            initViews()
+            initializeViews()
             
             // 加载当前设置
             loadCurrentSettings()
@@ -85,31 +79,34 @@ class SettingsActivity : AppCompatActivity() {
             setupListeners()
             
         } catch (e: Exception) {
-            android.util.Log.e("SettingsActivity", "设置页面初始化失败", e)
-            // 显示错误信息并关闭页面
-            android.widget.Toast.makeText(this, "设置页面加载失败: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            android.util.Log.e("SettingsActivity", "初始化失败", e)
+            Toast.makeText(this, "设置页面初始化失败: ${e.message}", Toast.LENGTH_LONG).show()
             finish()
         }
     }
     
-    private fun initViews() {
-        // GPS超时设置
+    private fun initializeViews() {
+        // 基本GPS设置
         gpsTimeoutSeekBar = findViewById(R.id.gpsTimeoutSeekBar)
         gpsTimeoutValue = findViewById(R.id.gpsTimeoutValue)
+        gpsUpdateIntervalSeekBar = findViewById(R.id.gpsUpdateIntervalSeekBar)
+        gpsUpdateIntervalValue = findViewById(R.id.gpsUpdateIntervalValue)
+        locationAccuracySeekBar = findViewById(R.id.locationAccuracySeekBar)
+        locationAccuracyValue = findViewById(R.id.locationAccuracyValue)
+        mqttAccuracySeekBar = findViewById(R.id.mqttAccuracySeekBar)
+        mqttAccuracyValue = findViewById(R.id.mqttAccuracyValue)
         
-        // 活跃状态设置
-        activeStateTimeoutSeekBar = findViewById(R.id.activeStateTimeoutSeekBar)
-        activeStateTimeoutValue = findViewById(R.id.activeStateTimeoutValue)
-        activeStateDistanceSeekBar = findViewById(R.id.activeStateDistanceSeekBar)
-        activeStateDistanceValue = findViewById(R.id.activeStateDistanceValue)
-        
-        // 步数阈值设置
-        stepThresholdSeekBar = findViewById(R.id.stepThresholdSeekBar)
-        stepThresholdValue = findViewById(R.id.stepThresholdValue)
-        
-        // 加速度阈值设置
-        accelerationThresholdSeekBar = findViewById(R.id.accelerationThresholdSeekBar)
-        accelerationThresholdValue = findViewById(R.id.accelerationThresholdValue)
+        // 状态转换阈值
+        indoorToOutdoorStepSeekBar = findViewById(R.id.indoorToOutdoorStepSeekBar)
+        indoorToOutdoorStepValue = findViewById(R.id.indoorToOutdoorStepValue)
+        indoorToOutdoorDistanceSeekBar = findViewById(R.id.indoorToOutdoorDistanceSeekBar)
+        indoorToOutdoorDistanceValue = findViewById(R.id.indoorToOutdoorDistanceValue)
+        outdoorToActiveStepSeekBar = findViewById(R.id.outdoorToActiveStepSeekBar)
+        outdoorToActiveStepValue = findViewById(R.id.outdoorToActiveStepValue)
+        outdoorToActiveDistanceSeekBar = findViewById(R.id.outdoorToActiveDistanceSeekBar)
+        outdoorToActiveDistanceValue = findViewById(R.id.outdoorToActiveDistanceValue)
+        activeToDrivingSpeedSeekBar = findViewById(R.id.activeToDrivingSpeedSeekBar)
+        activeToDrivingSpeedValue = findViewById(R.id.activeToDrivingSpeedValue)
         
         // 深度静止设置
         deepStationaryTimeoutSeekBar = findViewById(R.id.deepStationaryTimeoutSeekBar)
@@ -127,290 +124,188 @@ class SettingsActivity : AppCompatActivity() {
         drivingStationaryDistanceSeekBar = findViewById(R.id.drivingStationaryDistanceSeekBar)
         drivingStationaryDistanceValue = findViewById(R.id.drivingStationaryDistanceValue)
         
-        // 环境检测设置
-        environmentCheckSeekBar = findViewById(R.id.environmentCheckSeekBar)
-        environmentCheckValue = findViewById(R.id.environmentCheckValue)
-        
-        // 省电模式设置
-        powerSaveSwitch = findViewById(R.id.powerSaveSwitch)
-        gpsUpdateIntervalSeekBar = findViewById(R.id.gpsUpdateIntervalSeekBar)
-        gpsUpdateIntervalValue = findViewById(R.id.gpsUpdateIntervalValue)
-        stateCheckIntervalSeekBar = findViewById(R.id.stateCheckIntervalSeekBar)
-        stateCheckIntervalValue = findViewById(R.id.stateCheckIntervalValue)
+        // 其他设置
+        powerSaveModeSwitch = findViewById(R.id.powerSaveModeSwitch)
+        environmentCheckIntervalSeekBar = findViewById(R.id.environmentCheckIntervalSeekBar)
+        environmentCheckIntervalValue = findViewById(R.id.environmentCheckIntervalValue)
+        maxLocationHistorySeekBar = findViewById(R.id.maxLocationHistorySeekBar)
+        maxLocationHistoryValue = findViewById(R.id.maxLocationHistoryValue)
     }
     
     private fun loadCurrentSettings() {
-        // GPS超时设置 (15-120秒)
-        val gpsTimeout = sharedPreferences.getLong("gps_timeout_ms", 45000L)
-        gpsTimeoutSeekBar.progress = ((gpsTimeout - 15000) / 1000).toInt()
-        gpsTimeoutValue.text = "${gpsTimeout / 1000}秒"
+        // 基本GPS设置
+        gpsTimeoutSeekBar.progress = (SettingsManager.getGpsTimeoutMs(this) / 1000).toInt()
+        gpsUpdateIntervalSeekBar.progress = (SettingsManager.getGpsUpdateInterval(this) / 1000).toInt()
+        locationAccuracySeekBar.progress = SettingsManager.getLocationAccuracyThreshold(this).toInt()
+        mqttAccuracySeekBar.progress = SettingsManager.getMqttAccuracyThreshold(this).toInt()
         
-        // 活跃状态超时 (1-10分钟)
-        val activeStateTimeout = sharedPreferences.getLong("active_state_timeout_ms", 300000L)
-        activeStateTimeoutSeekBar.progress = ((activeStateTimeout - 60000) / 60000).toInt()
-        activeStateTimeoutValue.text = "${activeStateTimeout / 60000}分钟"
+        // 状态转换阈值
+        indoorToOutdoorStepSeekBar.progress = SettingsManager.getIndoorToOutdoorStepThreshold(this)
+        indoorToOutdoorDistanceSeekBar.progress = SettingsManager.getIndoorToOutdoorDistanceThreshold(this).toInt()
+        outdoorToActiveStepSeekBar.progress = SettingsManager.getOutdoorToActiveStepThreshold(this)
+        outdoorToActiveDistanceSeekBar.progress = SettingsManager.getOutdoorToActiveDistanceThreshold(this).toInt()
+        activeToDrivingSpeedSeekBar.progress = SettingsManager.getActiveToDrivingSpeedThreshold(this).toInt()
         
-        // 活跃状态距离阈值 (50-500米)
-        val activeStateDistance = sharedPreferences.getFloat("active_state_distance_threshold", 200.0f)
-        activeStateDistanceSeekBar.progress = ((activeStateDistance - 50) / 10).toInt()
-        activeStateDistanceValue.text = "${activeStateDistance.toInt()}米"
+        // 深度静止设置
+        deepStationaryTimeoutSeekBar.progress = (SettingsManager.getDeepStationaryTimeoutMs(this) / 60000).toInt()
+        deepStationaryStepSeekBar.progress = SettingsManager.getDeepStationaryStepThreshold(this)
+        deepStationaryAccelerationSeekBar.progress = (SettingsManager.getDeepStationaryAccelerationThreshold(this) * 10).toInt()
         
-        // 步数阈值 (5-100步)
-        val stepThreshold = sharedPreferences.getInt("step_threshold", 20)
-        stepThresholdSeekBar.progress = stepThreshold - 5
-        stepThresholdValue.text = "${stepThreshold}步"
+        // 驾驶模式设置
+        drivingSpeedSeekBar.progress = SettingsManager.getDrivingSpeedThreshold(this).toInt()
+        drivingStationaryTimeoutSeekBar.progress = (SettingsManager.getDrivingStationaryTimeoutMs(this) / 60000).toInt()
+        drivingStationaryDistanceSeekBar.progress = SettingsManager.getDrivingStationaryDistanceThreshold(this).toInt()
         
-        // 加速度阈值 (0.5-5.0)
-        val accelerationThreshold = sharedPreferences.getFloat("acceleration_threshold", 2.0f)
-        accelerationThresholdSeekBar.progress = ((accelerationThreshold - 0.5f) * 10).toInt()
-        accelerationThresholdValue.text = "${accelerationThreshold}m/s²"
+        // 其他设置
+        powerSaveModeSwitch.isChecked = SettingsManager.isPowerSaveMode(this)
+        environmentCheckIntervalSeekBar.progress = (SettingsManager.getEnvironmentCheckInterval(this) / 60000).toInt()
+        maxLocationHistorySeekBar.progress = SettingsManager.getMaxLocationHistory(this)
         
-        // 深度静止超时 (1-15分钟)
-        val deepStationaryTimeout = sharedPreferences.getLong("deep_stationary_timeout_ms", 300000L)
-        deepStationaryTimeoutSeekBar.progress = ((deepStationaryTimeout - 60000) / 60000).toInt()
-        deepStationaryTimeoutValue.text = "${deepStationaryTimeout / 60000}分钟"
-        
-        // 深度静止步数阈值 (10-100步)
-        val deepStationaryStep = sharedPreferences.getInt("deep_stationary_step_threshold", 30)
-        deepStationaryStepSeekBar.progress = deepStationaryStep - 10
-        deepStationaryStepValue.text = "${deepStationaryStep}步"
-        
-        // 深度静止加速度阈值 (0.5-3.0)
-        val deepStationaryAcceleration = sharedPreferences.getFloat("deep_stationary_acceleration_threshold", 1.5f)
-        deepStationaryAccelerationSeekBar.progress = ((deepStationaryAcceleration - 0.5f) * 10).toInt()
-        deepStationaryAccelerationValue.text = "${deepStationaryAcceleration}m/s²"
-        
-        // 驾驶速度阈值 (3-20 km/h)
-        val drivingSpeed = sharedPreferences.getFloat("driving_speed_threshold", 7.0f)
-        drivingSpeedSeekBar.progress = (drivingSpeed - 3).toInt()
-        drivingSpeedValue.text = "${drivingSpeed.toInt()}km/h"
-        
-        // 驾驶静止超时 (1-15分钟)
-        val drivingStationaryTimeout = sharedPreferences.getLong("driving_stationary_timeout_ms", 300000L)
-        drivingStationaryTimeoutSeekBar.progress = ((drivingStationaryTimeout - 60000) / 60000).toInt()
-        drivingStationaryTimeoutValue.text = "${drivingStationaryTimeout / 60000}分钟"
-        
-        // 驾驶静止距离阈值 (50-300米)
-        val drivingStationaryDistance = sharedPreferences.getFloat("driving_stationary_distance_threshold", 100.0f)
-        drivingStationaryDistanceSeekBar.progress = ((drivingStationaryDistance - 50) / 10).toInt()
-        drivingStationaryDistanceValue.text = "${drivingStationaryDistance.toInt()}米"
-        
-        // 环境检测间隔 (30秒-5分钟)
-        val environmentCheck = sharedPreferences.getLong("environment_check_interval", 60000L)
-        environmentCheckSeekBar.progress = ((environmentCheck - 30000) / 30000).toInt()
-        environmentCheckValue.text = "${environmentCheck / 60000}分钟"
-        
-        // 省电模式
-        val powerSave = sharedPreferences.getBoolean("power_save_mode", true)
-        powerSaveSwitch.isChecked = powerSave
-        
-        // GPS更新间隔 (5-60秒)
-        val gpsUpdateInterval = sharedPreferences.getLong("gps_update_interval", 10000L)
-        gpsUpdateIntervalSeekBar.progress = ((gpsUpdateInterval - 5000) / 1000).toInt()
-        gpsUpdateIntervalValue.text = "${gpsUpdateInterval / 1000}秒"
-        
-        // 状态检查间隔 (5-60秒)
-        val stateCheckInterval = sharedPreferences.getLong("state_check_interval", 15000L)
-        stateCheckIntervalSeekBar.progress = ((stateCheckInterval - 5000) / 1000).toInt()
-        stateCheckIntervalValue.text = "${stateCheckInterval / 1000}秒"
+        // 更新显示值
+        updateAllDisplayValues()
     }
     
     private fun setupListeners() {
-        // GPS超时监听器
-        gpsTimeoutSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = (progress + 15) * 1000L
-                gpsTimeoutValue.text = "${value / 1000}秒"
-                if (fromUser) {
-                    sharedPreferences.edit().putLong("gps_timeout_ms", value).apply()
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
+        // 基本GPS设置监听器
+        gpsTimeoutSeekBar.setOnSeekBarChangeListener(createSeekBarListener(gpsTimeoutValue, "秒"))
+        gpsUpdateIntervalSeekBar.setOnSeekBarChangeListener(createSeekBarListener(gpsUpdateIntervalValue, "秒"))
+        locationAccuracySeekBar.setOnSeekBarChangeListener(createSeekBarListener(locationAccuracyValue, "米"))
+        mqttAccuracySeekBar.setOnSeekBarChangeListener(createSeekBarListener(mqttAccuracyValue, "米"))
         
-        // 活跃状态超时监听器
-        activeStateTimeoutSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = (progress + 1) * 60000L
-                activeStateTimeoutValue.text = "${value / 60000}分钟"
-                if (fromUser) {
-                    sharedPreferences.edit().putLong("active_state_timeout_ms", value).apply()
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
+        // 状态转换阈值监听器
+        indoorToOutdoorStepSeekBar.setOnSeekBarChangeListener(createSeekBarListener(indoorToOutdoorStepValue, "步"))
+        indoorToOutdoorDistanceSeekBar.setOnSeekBarChangeListener(createSeekBarListener(indoorToOutdoorDistanceValue, "米"))
+        outdoorToActiveStepSeekBar.setOnSeekBarChangeListener(createSeekBarListener(outdoorToActiveStepValue, "步"))
+        outdoorToActiveDistanceSeekBar.setOnSeekBarChangeListener(createSeekBarListener(outdoorToActiveDistanceValue, "米"))
+        activeToDrivingSpeedSeekBar.setOnSeekBarChangeListener(createSeekBarListener(activeToDrivingSpeedValue, "km/h"))
         
-        // 活跃状态距离阈值监听器
-        activeStateDistanceSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = (progress + 5) * 10f
-                activeStateDistanceValue.text = "${value.toInt()}米"
-                if (fromUser) {
-                    sharedPreferences.edit().putFloat("active_state_distance_threshold", value).apply()
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        
-        // 步数阈值监听器
-        stepThresholdSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = progress + 5
-                stepThresholdValue.text = "${value}步"
-                if (fromUser) {
-                    sharedPreferences.edit().putInt("step_threshold", value).apply()
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        
-        // 加速度阈值监听器
-        accelerationThresholdSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = (progress / 10f) + 0.5f
-                accelerationThresholdValue.text = "${value}m/s²"
-                if (fromUser) {
-                    sharedPreferences.edit().putFloat("acceleration_threshold", value).apply()
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        
-        // 深度静止超时监听器
-        deepStationaryTimeoutSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = (progress + 1) * 60000L
-                deepStationaryTimeoutValue.text = "${value / 60000}分钟"
-                if (fromUser) {
-                    sharedPreferences.edit().putLong("deep_stationary_timeout_ms", value).apply()
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        
-        // 深度静止步数阈值监听器
-        deepStationaryStepSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = progress + 10
-                deepStationaryStepValue.text = "${value}步"
-                if (fromUser) {
-                    sharedPreferences.edit().putInt("deep_stationary_step_threshold", value).apply()
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        
-        // 深度静止加速度阈值监听器
+        // 深度静止设置监听器
+        deepStationaryTimeoutSeekBar.setOnSeekBarChangeListener(createSeekBarListener(deepStationaryTimeoutValue, "分钟"))
+        deepStationaryStepSeekBar.setOnSeekBarChangeListener(createSeekBarListener(deepStationaryStepValue, "步"))
         deepStationaryAccelerationSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = (progress / 10f) + 0.5f
-                deepStationaryAccelerationValue.text = "${value}m/s²"
-                if (fromUser) {
-                    sharedPreferences.edit().putFloat("deep_stationary_acceleration_threshold", value).apply()
-                }
+                deepStationaryAccelerationValue.text = "${(progress / 10.0f)}m/s²"
             }
+            
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
         
-        // 驾驶速度阈值监听器
-        drivingSpeedSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = progress + 3f
-                drivingSpeedValue.text = "${value.toInt()}km/h"
-                if (fromUser) {
-                    sharedPreferences.edit().putFloat("driving_speed_threshold", value).apply()
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
+        // 驾驶模式设置监听器
+        drivingSpeedSeekBar.setOnSeekBarChangeListener(createSeekBarListener(drivingSpeedValue, "km/h"))
+        drivingStationaryTimeoutSeekBar.setOnSeekBarChangeListener(createSeekBarListener(drivingStationaryTimeoutValue, "分钟"))
+        drivingStationaryDistanceSeekBar.setOnSeekBarChangeListener(createSeekBarListener(drivingStationaryDistanceValue, "米"))
         
-        // 驾驶静止超时监听器
-        drivingStationaryTimeoutSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = (progress + 1) * 60000L
-                drivingStationaryTimeoutValue.text = "${value / 60000}分钟"
-                if (fromUser) {
-                    sharedPreferences.edit().putLong("driving_stationary_timeout_ms", value).apply()
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
+        // 其他设置监听器
+        environmentCheckIntervalSeekBar.setOnSeekBarChangeListener(createSeekBarListener(environmentCheckIntervalValue, "分钟"))
+        maxLocationHistorySeekBar.setOnSeekBarChangeListener(createSeekBarListener(maxLocationHistoryValue, "个"))
         
-        // 驾驶静止距离阈值监听器
-        drivingStationaryDistanceSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = (progress + 5) * 10f
-                drivingStationaryDistanceValue.text = "${value.toInt()}米"
-                if (fromUser) {
-                    sharedPreferences.edit().putFloat("driving_stationary_distance_threshold", value).apply()
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        
-        // 环境检测间隔监听器
-        environmentCheckSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = (progress + 1) * 30000L
-                environmentCheckValue.text = "${value / 60000}分钟"
-                if (fromUser) {
-                    sharedPreferences.edit().putLong("environment_check_interval", value).apply()
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        
-        // 省电模式开关监听器
-        powerSaveSwitch.setOnCheckedChangeListener { _, isChecked ->
-            sharedPreferences.edit().putBoolean("power_save_mode", isChecked).apply()
+        // 按钮监听器
+        findViewById<com.google.android.material.button.MaterialButton>(R.id.resetButton).setOnClickListener {
+            resetToDefaults()
         }
         
-        // GPS更新间隔监听器
-        gpsUpdateIntervalSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = (progress + 5) * 1000L
-                gpsUpdateIntervalValue.text = "${value / 1000}秒"
-                if (fromUser) {
-                    sharedPreferences.edit().putLong("gps_update_interval", value).apply()
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        
-        // 状态检查间隔监听器
-        stateCheckIntervalSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = (progress + 5) * 1000L
-                stateCheckIntervalValue.text = "${value / 1000}秒"
-                if (fromUser) {
-                    sharedPreferences.edit().putLong("state_check_interval", value).apply()
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
+        findViewById<com.google.android.material.button.MaterialButton>(R.id.saveButton).setOnClickListener {
+            saveSettings()
+        }
     }
     
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            android.R.id.home -> {
-                finish()
-                true
+    private fun createSeekBarListener(textView: android.widget.TextView, unit: String): SeekBar.OnSeekBarChangeListener {
+        return object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                textView.text = "$progress$unit"
             }
-            else -> super.onOptionsItemSelected(item)
+            
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         }
+    }
+    
+    private fun updateAllDisplayValues() {
+        // 基本GPS设置
+        gpsTimeoutValue.text = "${gpsTimeoutSeekBar.progress}秒"
+        gpsUpdateIntervalValue.text = "${gpsUpdateIntervalSeekBar.progress}秒"
+        locationAccuracyValue.text = "${locationAccuracySeekBar.progress}米"
+        mqttAccuracyValue.text = "${mqttAccuracySeekBar.progress}米"
+        
+        // 状态转换阈值
+        indoorToOutdoorStepValue.text = "${indoorToOutdoorStepSeekBar.progress}步"
+        indoorToOutdoorDistanceValue.text = "${indoorToOutdoorDistanceSeekBar.progress}米"
+        outdoorToActiveStepValue.text = "${outdoorToActiveStepSeekBar.progress}步"
+        outdoorToActiveDistanceValue.text = "${outdoorToActiveDistanceSeekBar.progress}米"
+        activeToDrivingSpeedValue.text = "${activeToDrivingSpeedSeekBar.progress}km/h"
+        
+        // 深度静止设置
+        deepStationaryTimeoutValue.text = "${deepStationaryTimeoutSeekBar.progress}分钟"
+        deepStationaryStepValue.text = "${deepStationaryStepSeekBar.progress}步"
+        deepStationaryAccelerationValue.text = "${(deepStationaryAccelerationSeekBar.progress / 10.0f)}m/s²"
+        
+        // 驾驶模式设置
+        drivingSpeedValue.text = "${drivingSpeedSeekBar.progress}km/h"
+        drivingStationaryTimeoutValue.text = "${drivingStationaryTimeoutSeekBar.progress}分钟"
+        drivingStationaryDistanceValue.text = "${drivingStationaryDistanceSeekBar.progress}米"
+        
+        // 其他设置
+        environmentCheckIntervalValue.text = "${environmentCheckIntervalSeekBar.progress}分钟"
+        maxLocationHistoryValue.text = "${maxLocationHistorySeekBar.progress}个"
+    }
+    
+    private fun resetToDefaults() {
+        try {
+            SettingsManager.resetToDefaults(this)
+            loadCurrentSettings()
+            Toast.makeText(this, "设置已重置为默认值", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsActivity", "重置设置失败", e)
+            Toast.makeText(this, "重置设置失败: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun saveSettings() {
+        try {
+            val prefs = getSharedPreferences("gps_tracking_settings", MODE_PRIVATE)
+            val editor = prefs.edit()
+            
+            // 基本GPS设置
+            editor.putLong("gps_timeout_ms", gpsTimeoutSeekBar.progress * 1000L)
+            editor.putLong("gps_update_interval", gpsUpdateIntervalSeekBar.progress * 1000L)
+            editor.putFloat("location_accuracy_threshold", locationAccuracySeekBar.progress.toFloat())
+            editor.putFloat("mqtt_accuracy_threshold", mqttAccuracySeekBar.progress.toFloat())
+            
+            // 状态转换阈值
+            editor.putInt("indoor_to_outdoor_step_threshold", indoorToOutdoorStepSeekBar.progress)
+            editor.putFloat("indoor_to_outdoor_distance_threshold", indoorToOutdoorDistanceSeekBar.progress.toFloat())
+            editor.putInt("outdoor_to_active_step_threshold", outdoorToActiveStepSeekBar.progress)
+            editor.putFloat("outdoor_to_active_distance_threshold", outdoorToActiveDistanceSeekBar.progress.toFloat())
+            editor.putFloat("active_to_driving_speed_threshold", activeToDrivingSpeedSeekBar.progress.toFloat())
+            
+            // 深度静止设置
+            editor.putLong("deep_stationary_timeout_ms", deepStationaryTimeoutSeekBar.progress * 60000L)
+            editor.putInt("deep_stationary_step_threshold", deepStationaryStepSeekBar.progress)
+            editor.putFloat("deep_stationary_acceleration_threshold", deepStationaryAccelerationSeekBar.progress / 10.0f)
+            
+            // 驾驶模式设置
+            editor.putFloat("driving_speed_threshold", drivingSpeedSeekBar.progress.toFloat())
+            editor.putLong("driving_stationary_timeout_ms", drivingStationaryTimeoutSeekBar.progress * 60000L)
+            editor.putFloat("driving_stationary_distance_threshold", drivingStationaryDistanceSeekBar.progress.toFloat())
+            
+            // 其他设置
+            editor.putBoolean("power_save_mode", powerSaveModeSwitch.isChecked)
+            editor.putLong("environment_check_interval", environmentCheckIntervalSeekBar.progress * 60000L)
+            editor.putInt("max_location_history", maxLocationHistorySeekBar.progress)
+            
+            editor.apply()
+            
+            Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show()
+            
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsActivity", "保存设置失败", e)
+            Toast.makeText(this, "保存设置失败: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    override fun onSupportNavigateUp(): Boolean {
+        onBackPressed()
+        return true
     }
 }
