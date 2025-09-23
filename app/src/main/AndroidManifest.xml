@@ -80,12 +80,6 @@
             android:exported="false"
             android:parentActivityName=".MainActivity"
             android:theme="@style/Theme.GPSTracker" />
-            
-        <activity
-            android:name=".TestStationaryActivity"
-            android:exported="false"
-            android:parentActivityName=".MainActivity"
-            android:theme="@style/Theme.GPSTracker" />
         
         <!-- GPS跟踪服务 -->
         <service

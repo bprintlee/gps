@@ -224,36 +224,43 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             val shouldCheckEnvironment = (currentTime - lastEnvironmentCheck) > environmentCheckInterval
             
             // 使用GPS精度优化器获取最佳配置
-            val accuracyMode = if (isPowerSaveMode) {
-                android.util.Log.d("GpsTrackingService", "使用省电模式")
-                GpsAccuracyOptimizer.AccuracyMode.POWER_SAVE
-            } else {
-                // 使用智能推荐模式，自动检测室内环境
-                android.util.Log.d("GpsTrackingService", "使用智能推荐模式，自动检测环境")
-                val detectedMode = gpsAccuracyOptimizer.getSmartRecommendedMode()
-                
-                // 如果环境发生变化，记录并重新启动位置更新
-                if (shouldCheckEnvironment && lastDetectedMode != null && lastDetectedMode != detectedMode) {
-                    android.util.Log.d("GpsTrackingService", "环境变化检测: ${lastDetectedMode} -> $detectedMode")
-                    android.util.Log.d("GpsTrackingService", "环境变化，重新启动位置更新")
+            val accuracyMode = when {
+                currentState == TrackingState.ACTIVE -> {
+                    android.util.Log.d("GpsTrackingService", "活跃状态，使用户外活动模式")
+                    GpsAccuracyOptimizer.AccuracyMode.OUTDOOR_ACTIVITY
+                }
+                isPowerSaveMode -> {
+                    android.util.Log.d("GpsTrackingService", "使用省电模式")
+                    GpsAccuracyOptimizer.AccuracyMode.POWER_SAVE
+                }
+                else -> {
+                    // 使用智能推荐模式，自动检测室内环境
+                    android.util.Log.d("GpsTrackingService", "使用智能推荐模式，自动检测环境")
+                    val detectedMode = gpsAccuracyOptimizer.getSmartRecommendedMode()
+                    
+                    // 如果环境发生变化，记录并重新启动位置更新
+                    if (shouldCheckEnvironment && lastDetectedMode != null && lastDetectedMode != detectedMode) {
+                        android.util.Log.d("GpsTrackingService", "环境变化检测: ${lastDetectedMode} -> $detectedMode")
+                        android.util.Log.d("GpsTrackingService", "环境变化，重新启动位置更新")
+                        
+                        // 更新检测时间
+                        lastEnvironmentCheck = currentTime
+                        lastDetectedMode = detectedMode
+                        
+                        // 重新启动位置更新
+                        stopLocationUpdates()
+                        startLocationUpdates()
+                        return
+                    }
                     
                     // 更新检测时间
-                    lastEnvironmentCheck = currentTime
-                    lastDetectedMode = detectedMode
+                    if (shouldCheckEnvironment) {
+                        lastEnvironmentCheck = currentTime
+                        lastDetectedMode = detectedMode
+                    }
                     
-                    // 重新启动位置更新
-                    stopLocationUpdates()
-                    startLocationUpdates()
-                    return
+                    detectedMode
                 }
-                
-                // 更新检测时间
-                if (shouldCheckEnvironment) {
-                    lastEnvironmentCheck = currentTime
-                    lastDetectedMode = detectedMode
-                }
-                
-                detectedMode
             }
             
             val config = gpsAccuracyOptimizer.getAccuracyConfig(accuracyMode)
@@ -736,7 +743,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         
         // 根据模式和状态调整保存频率
         val saveThreshold = when {
-            currentState == TrackingState.ACTIVE -> 2 // 活跃状态：每2个点保存一次
+            currentState == TrackingState.ACTIVE -> 1 // 活跃状态：每个点都保存
             currentState == TrackingState.DRIVING -> 2 // 驾驶状态：每2个点保存一次
             currentState == TrackingState.OUTDOOR -> 3 // 室外状态：每3个点保存一次
             isPowerSaveMode -> 5 // 省电模式：每5个点保存一次
@@ -751,7 +758,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         // 根据状态调整定时保存频率
         val currentTime = System.currentTimeMillis()
         val saveInterval = when {
-            currentState == TrackingState.ACTIVE -> 10000L // 活跃状态：每10秒保存一次
+            currentState == TrackingState.ACTIVE -> 5000L // 活跃状态：每5秒保存一次
             currentState == TrackingState.DRIVING -> 10000L // 驾驶状态：每10秒保存一次
             currentState == TrackingState.OUTDOOR -> 15000L // 室外状态：每15秒保存一次
             else -> 30000L // 其他状态：每30秒保存一次

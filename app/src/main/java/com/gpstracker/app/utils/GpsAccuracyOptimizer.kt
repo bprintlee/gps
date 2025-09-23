@@ -81,10 +81,10 @@ class GpsAccuracyOptimizer(private val context: Context) {
             
             AccuracyMode.OUTDOOR_ACTIVITY -> AccuracyConfig(
                 priority = LocationRequest.PRIORITY_HIGH_ACCURACY,
-                interval = 3000L, // 3秒
-                fastestInterval = 1500L, // 1.5秒
+                interval = 2000L, // 2秒 - 提高活跃状态下的更新频率
+                fastestInterval = 1000L, // 1秒
                 smallestDisplacement = 1f, // 1米
-                maxWaitTime = 8000L, // 8秒
+                maxWaitTime = 5000L, // 5秒
                 enableBatching = false,
                 enableBackgroundLocation = true
             )
