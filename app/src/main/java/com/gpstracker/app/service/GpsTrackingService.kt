@@ -31,6 +31,7 @@ import com.gpstracker.app.utils.GpxExporter
 import com.gpstracker.app.utils.MqttManager
 import com.gpstracker.app.utils.GpsAccuracyOptimizer
 import com.gpstracker.app.database.GpsDatabase
+import com.gpstracker.app.utils.SettingsManager
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -69,17 +70,17 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private val allGpsData = mutableListOf<GpsData>() // 累积所有GPS数据
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
-    // 配置参数 - 优化省电
-    private val gpsTimeoutMs = 45000L // 45秒GPS超时，用于活跃状态切换到室内状态
-    private val activeStateTimeoutMs = 300000L // 5分钟活跃状态保持时间，避免频繁切换
-    private val activeStateDistanceThreshold = 200.0f // 200米距离阈值，用于活跃状态切换到室内状态
-    private val stepThreshold = 20 // 20步阈值
-    private val accelerationThreshold = 2.0f // 加速度阈值
+    // 配置参数 - 从SettingsManager动态读取
+    private fun getGpsTimeoutMs() = SettingsManager.getGpsTimeoutMs(this)
+    private fun getActiveStateTimeoutMs() = SettingsManager.getActiveStateTimeoutMs(this)
+    private fun getActiveStateDistanceThreshold() = SettingsManager.getActiveStateDistanceThreshold(this)
+    private fun getStepThreshold() = SettingsManager.getStepThreshold(this)
+    private fun getAccelerationThreshold() = SettingsManager.getAccelerationThreshold(this)
     
     // 深度静止状态配置
-    private val deepStationaryTimeoutMs = 300000L // 5分钟无移动进入深度静止
-    private val deepStationaryStepThreshold = 30 // 30步阈值退出深度静止
-    private val deepStationaryAccelerationThreshold = 1.5f // 深度静止状态加速度阈值
+    private fun getDeepStationaryTimeoutMs() = SettingsManager.getDeepStationaryTimeoutMs(this)
+    private fun getDeepStationaryStepThreshold() = SettingsManager.getDeepStationaryStepThreshold(this)
+    private fun getDeepStationaryAccelerationThreshold() = SettingsManager.getDeepStationaryAccelerationThreshold(this)
     private var lastMovementTime = 0L // 最后移动时间
     private var deepStationaryInitialStepCount = 0 // 进入深度静止时的步数
     private var isInDeepStationary = false // 是否处于深度静止状态
@@ -89,22 +90,22 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private var totalDeepStationaryTime = 0L // 累计深度静止时间
     
     // 驾驶状态检测配置
-    private val drivingSpeedThreshold = 7.0f // 7km/h速度阈值进入驾驶模式
-    private val drivingStationaryTimeoutMs = 300000L // 5分钟无移动退出驾驶模式
-    private val drivingStationaryDistanceThreshold = 100.0f // 100米距离阈值
+    private fun getDrivingSpeedThreshold() = SettingsManager.getDrivingSpeedThreshold(this)
+    private fun getDrivingStationaryTimeoutMs() = SettingsManager.getDrivingStationaryTimeoutMs(this)
+    private fun getDrivingStationaryDistanceThreshold() = SettingsManager.getDrivingStationaryDistanceThreshold(this)
     private var drivingEntryTime = 0L // 进入驾驶状态的时间
     private var drivingLastLocation: Location? = null // 驾驶状态下的最后位置
     private var isInDrivingMode = false // 是否处于驾驶模式
     
-    // 省电模式配置 - 默认开启省电模式
-    private var isPowerSaveMode = true
-    private var gpsUpdateInterval = 10000L // 默认10秒间隔（省电模式）
+    // 省电模式配置 - 从SettingsManager动态读取
+    private fun isPowerSaveMode()() = SettingsManager.isPowerSaveMode()(this)
+    private fun getGpsUpdateInterval() = SettingsManager.getGpsUpdateInterval(this)
     private var sensorUpdateInterval = SensorManager.SENSOR_DELAY_UI // 默认UI延迟
-    private var stateCheckInterval = 15000L // 默认15秒检查一次状态（省电模式）
+    private fun getStateCheckInterval() = SettingsManager.getStateCheckInterval(this)
     
     // 环境检测配置
     private var lastEnvironmentCheck = 0L
-    private val environmentCheckInterval = 60000L // 1分钟检查一次环境
+    private fun getEnvironmentCheckInterval() = SettingsManager.getEnvironmentCheckInterval(this)
     private var lastDetectedMode: GpsAccuracyOptimizer.AccuracyMode? = null
     
      // 最后位置信息
@@ -221,7 +222,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             
             // 检查是否需要重新检测环境
             val currentTime = System.currentTimeMillis()
-            val shouldCheckEnvironment = (currentTime - lastEnvironmentCheck) > environmentCheckInterval
+            val shouldCheckEnvironment = (currentTime - lastEnvironmentCheck) > getEnvironmentCheckInterval()
             
             // 使用GPS精度优化器获取最佳配置
             val accuracyMode = when {
@@ -233,7 +234,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                     android.util.Log.d("GpsTrackingService", "驾驶状态，使用驾驶模式")
                     GpsAccuracyOptimizer.AccuracyMode.DRIVING
                 }
-                isPowerSaveMode -> {
+                isPowerSaveMode() -> {
                     android.util.Log.d("GpsTrackingService", "使用省电模式")
                     GpsAccuracyOptimizer.AccuracyMode.POWER_SAVE
                 }
@@ -296,7 +297,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         // 根据省电模式和深度静止状态调整传感器更新频率
         val sensorDelay = when {
             isInDeepStationary -> SensorManager.SENSOR_DELAY_NORMAL // 深度静止状态使用正常延迟
-            isPowerSaveMode -> SensorManager.SENSOR_DELAY_UI // 省电模式使用UI延迟
+            isPowerSaveMode() -> SensorManager.SENSOR_DELAY_UI // 省电模式使用UI延迟
             else -> SensorManager.SENSOR_DELAY_NORMAL // 正常模式使用正常延迟
         }
         
@@ -320,9 +321,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 
                 // 根据深度静止状态调整检查频率
                 val checkInterval = if (isInDeepStationary) {
-                    stateCheckInterval * 2 // 深度静止状态下减少检查频率
+                    getStateCheckInterval() * 2 // 深度静止状态下减少检查频率
                 } else {
-                    stateCheckInterval
+                    getStateCheckInterval()
                 }
                 
                 delay(checkInterval)
@@ -336,29 +337,29 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private fun checkPowerSaveMode() {
         // 不再检查系统省电模式，使用应用内省电模式设置
         // 根据省电模式调整参数
-        if (isPowerSaveMode) {
-            gpsUpdateInterval = 5000L // 省电模式：5秒间隔（减少间隔以提高响应速度）
-            stateCheckInterval = 5000L // 省电模式：5秒检查一次（减少间隔）
+        if (isPowerSaveMode()) {
+            getGpsUpdateInterval() = 5000L // 省电模式：5秒间隔（减少间隔以提高响应速度）
+            getStateCheckInterval() = 5000L // 省电模式：5秒检查一次（减少间隔）
         } else {
-            gpsUpdateInterval = 3000L // 持续记录模式：3秒间隔
-            stateCheckInterval = 3000L // 持续记录模式：3秒检查一次
+            getGpsUpdateInterval() = 3000L // 持续记录模式：3秒间隔
+            getStateCheckInterval() = 3000L // 持续记录模式：3秒检查一次
         }
     }
     
     private fun updateTrackingState() {
         val currentTime = System.currentTimeMillis()
-        val gpsTimeout = (currentTime - lastGpsTime) > gpsTimeoutMs
+        val gpsTimeout = (currentTime - lastGpsTime) > getGpsTimeoutMs()
         val previousState = currentState
         
         // 检查是否应该进入深度静止状态
         val shouldEnterDeepStationary = !isInDeepStationary && 
                                        currentState == TrackingState.INDOOR && 
-                                       (currentTime - lastMovementTime) > deepStationaryTimeoutMs
+                                       (currentTime - lastMovementTime) > getDeepStationaryTimeoutMs()
         
         // 检查是否应该退出深度静止状态
         val shouldExitDeepStationary = isInDeepStationary && (
-            (stepCount - deepStationaryInitialStepCount) >= deepStationaryStepThreshold ||
-            lastAcceleration > deepStationaryAccelerationThreshold
+            (stepCount - deepStationaryInitialStepCount) >= getDeepStationaryStepThreshold() ||
+            lastAcceleration > getDeepStationaryAccelerationThreshold()
         )
         
         when {
@@ -428,7 +429,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             }
             
             // 3. 步数检测（活跃状态）
-            stepIncreaseSinceStart >= stepThreshold -> {
+            stepIncreaseSinceStart >= getStepThreshold() -> {
                 currentState = TrackingState.ACTIVE
                 // 不立即设置isGpsAvailable为true，等待GPS信号确认
                 lastMovementTime = currentTime
@@ -442,10 +443,10 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
              currentState == TrackingState.ACTIVE -> {
                  val timeInActiveState = currentTime - activeStateStartTime
                  
-                 android.util.Log.d("GpsTrackingService", "活跃状态检查 - 活跃时间: ${timeInActiveState/1000}秒, 阈值: ${activeStateTimeoutMs/1000}秒")
+                 android.util.Log.d("GpsTrackingService", "活跃状态检查 - 活跃时间: ${timeInActiveState/1000}秒, 阈值: ${getActiveStateTimeoutMs()/1000}秒")
                  
                  // 活跃状态下，前5分钟不检测
-                 if (timeInActiveState > activeStateTimeoutMs) {
+                 if (timeInActiveState > getActiveStateTimeoutMs()) {
                      val timeSinceLastMovement = currentTime - lastMovementTime
                      
                      // 检查距离条件：当前与5分钟前位置的距离
@@ -465,17 +466,17 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                      }
                      
                      // 检查GPS超时条件
-                     val gpsTimeout = (currentTime - lastGpsTime) > gpsTimeoutMs
+                     val gpsTimeout = (currentTime - lastGpsTime) > getGpsTimeoutMs()
                      val gpsTimeSinceLastUpdate = (currentTime - lastGpsTime) / 1000
                      
                      android.util.Log.d("GpsTrackingService", "活跃状态切换检查:")
-                     android.util.Log.d("GpsTrackingService", "  距离条件: ${distanceToFiveMinutesAgo}m ≤ ${activeStateDistanceThreshold}m = ${distanceToFiveMinutesAgo <= activeStateDistanceThreshold}")
-                     android.util.Log.d("GpsTrackingService", "  GPS超时: ${gpsTimeSinceLastUpdate}秒 > ${gpsTimeoutMs/1000}秒 = $gpsTimeout")
+                     android.util.Log.d("GpsTrackingService", "  距离条件: ${distanceToFiveMinutesAgo}m ≤ ${getActiveStateDistanceThreshold()}m = ${distanceToFiveMinutesAgo <= getActiveStateDistanceThreshold()}")
+                     android.util.Log.d("GpsTrackingService", "  GPS超时: ${gpsTimeSinceLastUpdate}秒 > ${getGpsTimeoutMs()/1000}秒 = $gpsTimeout")
                      
                      // 满足任一条件就切换到室内状态：
                      // 1. 当前与5分钟前位置距离 ≤ 200米
                      // 2. 或者 45秒内没有GPS信号
-                     val shouldSwitchToIndoor = (distanceToFiveMinutesAgo <= activeStateDistanceThreshold) || 
+                     val shouldSwitchToIndoor = (distanceToFiveMinutesAgo <= getActiveStateDistanceThreshold()) || 
                                                gpsTimeout
                      
                      if (shouldSwitchToIndoor) {
@@ -483,16 +484,16 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                          isGpsAvailable = false
                          lastMovementTime = currentTime
                          
-                         val reason = if (distanceToFiveMinutesAgo <= activeStateDistanceThreshold) {
-                             "距离条件: ${distanceToFiveMinutesAgo}m ≤ ${activeStateDistanceThreshold}m"
+                         val reason = if (distanceToFiveMinutesAgo <= getActiveStateDistanceThreshold()) {
+                             "距离条件: ${distanceToFiveMinutesAgo}m ≤ ${getActiveStateDistanceThreshold()}m"
                          } else {
-                             "GPS超时: ${gpsTimeSinceLastUpdate}秒 > ${gpsTimeoutMs/1000}秒"
+                             "GPS超时: ${gpsTimeSinceLastUpdate}秒 > ${getGpsTimeoutMs()/1000}秒"
                          }
                          
                          android.util.Log.d("GpsTrackingService", "✓ 活跃状态切换到室内 - $reason, 活跃时间: ${timeInActiveState/1000}秒")
                          
                          // 室内状态时降低GPS更新频率
-                         if (!isPowerSaveMode) {
+                         if (!isPowerSaveMode()) {
                              stopLocationUpdates()
                              startLocationUpdates()
                          }
@@ -514,7 +515,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                      android.util.Log.d("GpsTrackingService", "GPS超时切换到室内状态")
                      
                      // 室内状态时降低GPS更新频率
-                     if (!isPowerSaveMode) {
+                     if (!isPowerSaveMode()) {
                          stopLocationUpdates()
                          startLocationUpdates()
                      }
@@ -561,8 +562,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         // 基于GPS速度检测
         if (lastLocation != null && lastLocation!!.hasSpeed()) {
             val speedKmh = lastLocation!!.speed * 3.6f
-            if (speedKmh >= drivingSpeedThreshold) {
-                android.util.Log.d("GpsTrackingService", "检测到驾驶速度: ${speedKmh} km/h (阈值: ${drivingSpeedThreshold} km/h)")
+            if (speedKmh >= getDrivingSpeedThreshold()) {
+                android.util.Log.d("GpsTrackingService", "检测到驾驶速度: ${speedKmh} km/h (阈值: ${getDrivingSpeedThreshold()} km/h)")
                 return true
             }
         }
@@ -580,7 +581,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
          val timeInDriving = currentTime - drivingEntryTime
          
          // 如果驾驶时间超过5分钟
-         if (timeInDriving > drivingStationaryTimeoutMs) {
+         if (timeInDriving > getDrivingStationaryTimeoutMs()) {
              // 检查移动距离
              val distance = if (drivingLastLocation != null && lastLocation != null) {
                  drivingLastLocation!!.distanceTo(lastLocation!!)
@@ -589,7 +590,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
              }
              
              // 如果移动距离小于100米，退出驾驶模式
-             if (distance < drivingStationaryDistanceThreshold) {
+             if (distance < getDrivingStationaryDistanceThreshold()) {
                  android.util.Log.d("GpsTrackingService", "驾驶模式超时且移动距离不足 - 距离: ${distance}m, 时间: ${timeInDriving/1000}秒")
                  return true
              } else {
@@ -607,7 +608,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
       */
      private fun getLocationFiveMinutesAgo(): Location? {
          val currentTime = System.currentTimeMillis()
-         val fiveMinutesAgo = currentTime - activeStateTimeoutMs
+         val fiveMinutesAgo = currentTime - getActiveStateTimeoutMs()
          
          android.util.Log.d("GpsTrackingService", "查找5分钟前位置 - 当前时间: $currentTime, 5分钟前: $fiveMinutesAgo")
          
@@ -755,7 +756,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 lastAcceleration = lastAcceleration * 0.8f + currentAcceleration * 0.2f
                 
                 // 在深度静止状态下，记录明显的加速度变化
-                if (isInDeepStationary && currentAcceleration > deepStationaryAccelerationThreshold) {
+                if (isInDeepStationary && currentAcceleration > getDeepStationaryAccelerationThreshold()) {
                     android.util.Log.d("GpsTrackingService", "深度静止状态检测到明显加速度: $currentAcceleration")
                 }
             }
@@ -883,7 +884,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     fun isGpsAvailable(): Boolean = isGpsAvailable
     fun getStepCount(): Int = stepCount
     fun getLastAcceleration(): Float = lastAcceleration
-    fun isPowerSaveMode(): Boolean = isPowerSaveMode
+    fun isPowerSaveMode()(): Boolean = isPowerSaveMode()
     fun getLastLocation(): Location? = lastLocation
     
      // 调试信息方法
@@ -918,10 +919,10 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
              "stepCount" to stepCount,
              "initialStepCount" to initialStepCount,
              "stepIncreaseSinceStart" to stepIncreaseSinceStart,
-             "stepThreshold" to stepThreshold,
-             "gpsTimeoutMs" to gpsTimeoutMs,
-             "activeStateTimeoutMs" to activeStateTimeoutMs,
-             "activeStateDistanceThreshold" to activeStateDistanceThreshold,
+             "getStepThreshold()" to getStepThreshold(),
+             "getGpsTimeoutMs()" to getGpsTimeoutMs(),
+             "getActiveStateTimeoutMs()" to getActiveStateTimeoutMs(),
+             "getActiveStateDistanceThreshold()" to getActiveStateDistanceThreshold(),
              "lastGpsTime" to lastGpsTime,
              "activeStateStartTime" to activeStateStartTime
          )
@@ -937,9 +938,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     fun getTimeInDeepStationary(): Long = if (isInDeepStationary) System.currentTimeMillis() - deepStationaryEntryTime else 0
     fun getTotalDeepStationaryTime(): Long = totalDeepStationaryTime + if (isInDeepStationary) getTimeInDeepStationary() else 0
     fun getDeepStationaryConfig(): Map<String, Any> = mapOf(
-        "timeoutMs" to deepStationaryTimeoutMs,
-        "stepThreshold" to deepStationaryStepThreshold,
-        "accelerationThreshold" to deepStationaryAccelerationThreshold
+        "timeoutMs" to getDeepStationaryTimeoutMs(),
+        "getStepThreshold()" to getDeepStationaryStepThreshold(),
+        "getAccelerationThreshold()" to getDeepStationaryAccelerationThreshold()
     )
     
     // 行程管理相关方法
@@ -1038,7 +1039,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     // 手动切换省电模式
     fun togglePowerSaveMode() {
-        isPowerSaveMode = !isPowerSaveMode
+        isPowerSaveMode() = !isPowerSaveMode()
         checkPowerSaveMode()
         
         // 重新启动位置更新以应用新设置
