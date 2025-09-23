@@ -34,6 +34,13 @@ class GPSTrackerApplication : Application() {
             val appInfo = PackageInfoHelper.getAppInfoSummary(this)
             Log.d("GPSTrackerApp", "应用信息: $appInfo")
             
+            // 如果PackageInfo获取失败，运行诊断
+            if (appInfo.contains("获取失败")) {
+                Log.w("GPSTrackerApp", "PackageInfo获取失败，运行诊断...")
+                val diagnostics = PackageInfoHelper.diagnosePackageInfo(this)
+                Log.w("GPSTrackerApp", diagnostics)
+            }
+            
             Log.d("GPSTrackerApp", "=== Application初始化完成 ===")
         } catch (e: Exception) {
             Log.e("GPSTrackerApp", "=== Application初始化失败 ===", e)

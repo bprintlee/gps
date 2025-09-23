@@ -210,7 +210,7 @@ class LogManager(private val context: Context) {
                 writer.println("=== GPS Tracker 日志导出 ===")
                 writer.println("导出时间: ${dateFormat.format(Date())}")
                 writer.println("设备信息: ${android.os.Build.MODEL} (${android.os.Build.VERSION.RELEASE})")
-                writer.println("应用版本: ${PackageInfoHelper.getVersionName(context)}")
+                writer.println("应用版本: ${PackageInfoHelper.getVersionNameSimple(context)}")
                 writer.println()
                 
                 // 导出所有日志文件
