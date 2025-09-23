@@ -221,16 +221,26 @@ object PackageInfoHelper {
      */
     fun getAppInfoSummary(context: Context): String {
         return try {
+            // 首先尝试获取包名
+            val packageName = getPackageName(context)
+            if (packageName.isNullOrEmpty()) {
+                return "应用信息获取失败: 包名为空"
+            }
+            
+            // 尝试获取PackageInfo
             val packageInfo = getPackageInfo(context)
             if (packageInfo != null) {
                 val versionCode = getVersionCode(context)
-                "包名: ${packageInfo.packageName}, 版本: ${packageInfo.versionName} ($versionCode)"
+                val versionName = packageInfo.versionName ?: "未知"
+                "包名: $packageName, 版本: $versionName ($versionCode)"
             } else {
-                "包名: ${getPackageName(context)}, 版本: 获取失败"
+                // PackageInfo获取失败，尝试其他方法
+                val versionName = getVersionNameSimple(context)
+                "包名: $packageName, 版本: $versionName (PackageInfo获取失败)"
             }
         } catch (e: Exception) {
             Log.e(TAG, "获取应用信息摘要失败", e)
-            "应用信息获取失败"
+            "应用信息获取失败: ${e.message}"
         }
     }
     
