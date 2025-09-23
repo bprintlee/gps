@@ -60,7 +60,8 @@ class SettingsActivity : AppCompatActivity() {
                     }
                     override fun onStartTrackingTouch(seekBar: SeekBar?) {}
                     override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                        val newTimeout = progress * 1000L
+                        val currentProgress = seekBar?.progress ?: 30
+                        val newTimeout = currentProgress * 1000L
                         sharedPreferences.edit().putLong("gps_timeout_ms", newTimeout).apply()
                         Log.d("SettingsActivity", "GPS超时设置更新: ${newTimeout}ms")
                     }
