@@ -5,7 +5,6 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- Toolbar -->
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
@@ -13,877 +12,93 @@
         android:background="?attr/colorPrimary"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-        app:title="GPS设置" />
+        app:title="设置" />
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:fillViewport="true">
+        android:layout_height="match_parent"
+        android:padding="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="vertical">
 
-        <!-- 基本GPS设置 -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="4dp">
+            <!-- GPS设置 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="GPS设置"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp" />
 
+            <!-- GPS超时设置 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
 
                 <TextView
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="基本GPS设置"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/black"
-                    android:layout_marginBottom="16dp" />
+                    android:layout_weight="1"
+                    android:text="GPS超时时间"
+                    android:textSize="16sp" />
 
-                <!-- GPS超时时间 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <TextView
+                    android:id="@+id/gpsTimeoutValue"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="GPS超时时间"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/gpsTimeoutSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="120"
-                            android:min="10"
-                            android:progress="45" />
-
-                        <TextView
-                            android:id="@+id/gpsTimeoutValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="45秒"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- GPS更新间隔 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="GPS更新间隔"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/gpsUpdateIntervalSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="60"
-                            android:min="1"
-                            android:progress="10" />
-
-                        <TextView
-                            android:id="@+id/gpsUpdateIntervalValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="10秒"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- 位置精度阈值 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="位置精度阈值"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/locationAccuracySeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="200"
-                            android:min="10"
-                            android:progress="50" />
-
-                        <TextView
-                            android:id="@+id/locationAccuracyValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="50米"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- MQTT精度阈值 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="MQTT精度阈值"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/mqttAccuracySeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="200"
-                            android:min="10"
-                            android:progress="60" />
-
-                        <TextView
-                            android:id="@+id/mqttAccuracyValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="60米"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
+                    android:text="30秒"
+                    android:textSize="16sp"
+                    android:layout_marginEnd="8dp" />
 
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
-        <!-- 状态转换阈值设置 -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="4dp">
+            <SeekBar
+                android:id="@+id/gpsTimeoutSeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="120"
+                android:min="5"
+                android:progress="30"
+                android:layout_marginBottom="16dp" />
 
+            <!-- 省电模式设置 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
 
                 <TextView
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="状态转换阈值"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/black"
-                    android:layout_marginBottom="16dp" />
+                    android:layout_weight="1"
+                    android:text="省电模式"
+                    android:textSize="16sp" />
 
-                <!-- 室内到室外步数阈值 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="室内→室外步数阈值"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/indoorToOutdoorStepSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="200"
-                            android:min="10"
-                            android:progress="50" />
-
-                        <TextView
-                            android:id="@+id/indoorToOutdoorStepValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="50步"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- 室内到室外距离阈值 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="室内→室外距离阈值"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/indoorToOutdoorDistanceSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="500"
-                            android:min="50"
-                            android:progress="100" />
-
-                        <TextView
-                            android:id="@+id/indoorToOutdoorDistanceValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="100米"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- 室外到活跃步数阈值 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="室外→活跃步数阈值"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/outdoorToActiveStepSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="500"
-                            android:min="50"
-                            android:progress="100" />
-
-                        <TextView
-                            android:id="@+id/outdoorToActiveStepValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="100步"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- 室外到活跃距离阈值 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="室外→活跃距离阈值"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/outdoorToActiveDistanceSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="2000"
-                            android:min="100"
-                            android:progress="500" />
-
-                        <TextView
-                            android:id="@+id/outdoorToActiveDistanceValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="500米"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- 活跃到驾驶速度阈值 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="活跃→驾驶速度阈值"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/activeToDrivingSpeedSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="50"
-                            android:min="5"
-                            android:progress="15" />
-
-                        <TextView
-                            android:id="@+id/activeToDrivingSpeedValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="15km/h"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
+                <Switch
+                    android:id="@+id/powerSaveSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
 
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
-        <!-- 深度静止设置 -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="4dp">
-
-            <LinearLayout
+            <!-- 说明文字 -->
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="深度静止设置"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/black"
-                    android:layout_marginBottom="16dp" />
-
-                <!-- 深度静止超时 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="深度静止超时"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/deepStationaryTimeoutSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="60"
-                            android:min="5"
-                            android:progress="5" />
-
-                        <TextView
-                            android:id="@+id/deepStationaryTimeoutValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="5分钟"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- 深度静止步数阈值 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="深度静止步数阈值"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/deepStationaryStepSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="100"
-                            android:min="10"
-                            android:progress="30" />
-
-                        <TextView
-                            android:id="@+id/deepStationaryStepValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="30步"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- 深度静止加速度阈值 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="深度静止加速度阈值"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/deepStationaryAccelerationSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="50"
-                            android:min="5"
-                            android:progress="15" />
-
-                        <TextView
-                            android:id="@+id/deepStationaryAccelerationValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="1.5m/s²"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 驾驶模式设置 -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="4dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="驾驶模式设置"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/black"
-                    android:layout_marginBottom="16dp" />
-
-                <!-- 驾驶速度阈值 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="驾驶速度阈值"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/drivingSpeedSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="30"
-                            android:min="3"
-                            android:progress="7" />
-
-                        <TextView
-                            android:id="@+id/drivingSpeedValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="7km/h"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- 驾驶静止超时 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="驾驶静止超时"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/drivingStationaryTimeoutSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="60"
-                            android:min="5"
-                            android:progress="5" />
-
-                        <TextView
-                            android:id="@+id/drivingStationaryTimeoutValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="5分钟"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- 驾驶静止距离阈值 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="驾驶静止距离阈值"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/drivingStationaryDistanceSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="500"
-                            android:min="50"
-                            android:progress="100" />
-
-                        <TextView
-                            android:id="@+id/drivingStationaryDistanceValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="100米"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 其他设置 -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="4dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="其他设置"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/black"
-                    android:layout_marginBottom="16dp" />
-
-                <!-- 省电模式 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="省电模式"
-                        android:textColor="@color/black" />
-
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/powerSaveModeSwitch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true" />
-
-                </LinearLayout>
-
-                <!-- 环境检测间隔 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="环境检测间隔"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/environmentCheckIntervalSeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="10"
-                            android:min="1"
-                            android:progress="1" />
-
-                        <TextView
-                            android:id="@+id/environmentCheckIntervalValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="1分钟"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- 最大位置历史 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="最大位置历史"
-                        android:textColor="@color/black" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <SeekBar
-                            android:id="@+id/maxLocationHistorySeekBar"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="500"
-                            android:min="50"
-                            android:progress="100" />
-
-                        <TextView
-                            android:id="@+id/maxLocationHistoryValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="100个"
-                            android:textColor="@color/black"
-                            android:layout_marginStart="8dp"
-                            android:minWidth="60dp" />
-
-                    </LinearLayout>
-                </LinearLayout>
-
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 操作按钮 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/resetButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                android:text="重置默认"
-                android:textColor="@color/black"
-                style="@style/Widget.Material3.Button.OutlinedButton" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/saveButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:text="保存设置"
-                android:textColor="@color/white"
-                style="@style/Widget.Material3.Button" />
+                android:text="设置说明：\n• GPS超时时间：GPS信号获取的超时时间\n• 省电模式：启用后降低GPS更新频率以节省电量"
+                android:textSize="14sp"
+                android:textColor="@android:color/darker_gray"
+                android:layout_marginTop="16dp" />
 
         </LinearLayout>
 
-        </LinearLayout>
     </ScrollView>
+
 </LinearLayout>
