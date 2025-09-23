@@ -66,7 +66,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
     // 配置参数 - 优化省电
-    private val gpsTimeoutMs = 30000L // 30秒GPS超时
+    private val gpsTimeoutMs = 180000L // 3分钟GPS超时，避免频繁切换状态
+    private val activeStateTimeoutMs = 300000L // 5分钟活跃状态保持时间，避免频繁切换
     private val stepThreshold = 20 // 20步阈值
     private val accelerationThreshold = 2.0f // 加速度阈值
     
@@ -386,23 +387,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 android.util.Log.v("GpsTrackingService", "深度静止状态监测 - 步数: $stepCount, 加速度: $lastAcceleration")
             }
             
-            // 正常状态转换逻辑
-            gpsTimeout -> {
-                currentState = TrackingState.INDOOR
-                isGpsAvailable = false
-                lastMovementTime = currentTime
-                // 室内状态时降低GPS更新频率
-                if (!isPowerSaveMode) {
-                    stopLocationUpdates()
-                    startLocationUpdates()
-                }
-            }
-            stepCount >= stepThreshold -> {
-                currentState = TrackingState.ACTIVE
-                isGpsAvailable = true
-                lastMovementTime = currentTime
-            }
-            // 检查是否应该进入驾驶状态（基于速度）
+            // 正常状态转换逻辑 - 重新排序优先级
+            // 1. 首先检查驾驶模式（最高优先级）
             shouldEnterDrivingMode() -> {
                 currentState = TrackingState.DRIVING
                 isGpsAvailable = true
@@ -413,7 +399,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 android.util.Log.d("GpsTrackingService", "进入驾驶状态 - 速度: ${lastLocation?.speed?.times(3.6f)} km/h")
             }
             
-            // 检查是否应该退出驾驶状态（基于距离和时间）
+            // 2. 检查是否应该退出驾驶状态
             shouldExitDrivingMode() -> {
                 currentState = TrackingState.INDOOR
                 isInDrivingMode = false
@@ -422,10 +408,48 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 // 重新启动GPS更新并进行环境检测
                 startLocationUpdates()
             }
+            
+            // 3. 步数检测（活跃状态）
+            stepCount >= stepThreshold -> {
+                currentState = TrackingState.ACTIVE
+                isGpsAvailable = true
+                lastMovementTime = currentTime
+            }
+            
+            // 4. GPS超时检查（降低优先级，避免覆盖驾驶模式）
+            gpsTimeout -> {
+                // 只有在非驾驶模式下才切换到室内
+                if (!isInDrivingMode) {
+                    // 如果当前是活跃状态，需要更长时间的无GPS信号才切换到室内
+                    if (currentState == TrackingState.ACTIVE) {
+                        val timeSinceLastMovement = currentTime - lastMovementTime
+                        if (timeSinceLastMovement > activeStateTimeoutMs) {
+                            currentState = TrackingState.INDOOR
+                            isGpsAvailable = false
+                            android.util.Log.d("GpsTrackingService", "活跃状态超时，切换到室内 - 无移动时间: ${timeSinceLastMovement/1000}秒")
+                        } else {
+                            android.util.Log.d("GpsTrackingService", "活跃状态保持中 - 无移动时间: ${timeSinceLastMovement/1000}秒，需要${activeStateTimeoutMs/1000}秒才切换")
+                        }
+                    } else {
+                        currentState = TrackingState.INDOOR
+                        isGpsAvailable = false
+                    }
+                    lastMovementTime = currentTime
+                    // 室内状态时降低GPS更新频率
+                    if (!isPowerSaveMode) {
+                        stopLocationUpdates()
+                        startLocationUpdates()
+                    }
+                }
+            }
+            
+            // 5. GPS可用时切换到室外
             isGpsAvailable -> {
                 currentState = TrackingState.OUTDOOR
                 lastMovementTime = currentTime
             }
+            
+            // 6. 默认情况
             else -> {
                 currentState = TrackingState.INDOOR
             }
