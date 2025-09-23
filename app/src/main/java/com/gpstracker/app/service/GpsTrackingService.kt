@@ -85,13 +85,11 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     // 驾驶状态检测配置
     private val drivingSpeedThreshold = 7.0f // 7km/h速度阈值进入驾驶模式
-    private val drivingAccelerationThreshold = 15.0f // 15.0m/s²加速度阈值（用于地下车库等无GPS场景，避免误判步行）
     private val drivingStationaryTimeoutMs = 300000L // 5分钟无移动退出驾驶模式
     private val drivingStationaryDistanceThreshold = 100.0f // 100米距离阈值
     private var drivingEntryTime = 0L // 进入驾驶状态的时间
     private var drivingLastLocation: Location? = null // 驾驶状态下的最后位置
     private var isInDrivingMode = false // 是否处于驾驶模式
-    private var drivingAccelerationStartTime = 0L // 开始检测驾驶加速度的时间
     
     // 省电模式配置 - 默认开启省电模式
     private var isPowerSaveMode = true
@@ -483,33 +481,13 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private fun shouldEnterDrivingMode(): Boolean {
         if (isInDrivingMode) return false
         
-        // 方法1：基于GPS速度检测（优先）
+        // 基于GPS速度检测
         if (lastLocation != null && lastLocation!!.hasSpeed()) {
             val speedKmh = lastLocation!!.speed * 3.6f
             if (speedKmh >= drivingSpeedThreshold) {
-                android.util.Log.d("GpsTrackingService", "GPS检测到驾驶速度: ${speedKmh} km/h (阈值: ${drivingSpeedThreshold} km/h)")
+                android.util.Log.d("GpsTrackingService", "检测到驾驶速度: ${speedKmh} km/h (阈值: ${drivingSpeedThreshold} km/h)")
                 return true
             }
-        }
-        
-        // 方法2：基于加速度检测（用于地下车库等无GPS场景）
-        if (lastAcceleration >= drivingAccelerationThreshold) {
-            val currentTime = System.currentTimeMillis()
-            if (drivingAccelerationStartTime == 0L) {
-                drivingAccelerationStartTime = currentTime
-                android.util.Log.d("GpsTrackingService", "开始检测驾驶加速度: ${lastAcceleration} m/s² (阈值: ${drivingAccelerationThreshold} m/s²)")
-            } else {
-                val accelerationDuration = currentTime - drivingAccelerationStartTime
-                // 持续1秒以上的高加速度认为是驾驶（急加速/急刹车）
-                if (accelerationDuration >= 1000L) {
-                    android.util.Log.d("GpsTrackingService", "加速度检测到驾驶: ${lastAcceleration} m/s² 持续 ${accelerationDuration}ms")
-                    drivingAccelerationStartTime = 0L // 重置
-                    return true
-                }
-            }
-        } else {
-            // 加速度降低，重置检测时间
-            drivingAccelerationStartTime = 0L
         }
         
         return false
