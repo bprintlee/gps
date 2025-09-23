@@ -92,6 +92,12 @@
             android:exported="false"
             android:parentActivityName=".MainActivity"
             android:theme="@style/Theme.GPSTracker.NoActionBar" />
+            
+        <activity
+            android:name=".SettingsActivityDetailed"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/Theme.GPSTracker.NoActionBar" />
         
         <!-- GPS跟踪服务 -->
         <service

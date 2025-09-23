@@ -147,6 +147,12 @@ class MainActivity : AppCompatActivity() {
             true
         }
         
+        // 详细设置按钮
+        binding.detailedSettingsButton.setOnClickListener {
+            val intent = Intent(this, SettingsActivityDetailed::class.java)
+            startActivity(intent)
+        }
+        
         // MQTT测试功能和GPS精度检查功能已删除
         
     }

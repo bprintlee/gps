@@ -348,7 +348,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     private fun updateTrackingState() {
         val currentTime = System.currentTimeMillis()
-        val gpsTimeout = (currentTime - lastGpsTime) > getGpsTimeoutMs()
+        val gpsTimeout = checkGpsTimeoutStatus() // 使用新的GPS超时检查方法
         val previousState = currentState
         
         // 检查是否应该进入深度静止状态
@@ -742,6 +742,25 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         // 每次符合精度要求的结果都立即保存到数据库和上报到MQTT
         // 不再直接保存到GPX文件，统一保存到数据库，行程结束时手动生成GPX文件
         android.util.Log.d("GpsTrackingService", "GPS数据已处理，精度符合要求，已保存到数据库和上报到MQTT")
+    }
+    
+    /**
+     * 检查GPS超时状态
+     * 如果GPS信号在超时时间内没有返回，则认为没信号，本次调用结束
+     */
+    private fun checkGpsTimeoutStatus(): Boolean {
+        val currentTime = System.currentTimeMillis()
+        val timeSinceLastGps = currentTime - lastGpsTime
+        val timeoutMs = getGpsTimeoutMs()
+        
+        if (timeSinceLastGps > timeoutMs) {
+            if (isGpsAvailable) {
+                android.util.Log.w("GpsTrackingService", "GPS超时: ${timeSinceLastGps/1000}秒 > ${timeoutMs/1000}秒，认为无信号")
+                isGpsAvailable = false
+            }
+            return true // GPS超时
+        }
+        return false // GPS正常
     }
     
     override fun onSensorChanged(event: SensorEvent?) {
