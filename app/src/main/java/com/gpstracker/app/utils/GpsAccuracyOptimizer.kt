@@ -71,10 +71,10 @@ class GpsAccuracyOptimizer(private val context: Context) {
             
             AccuracyMode.POWER_SAVE -> AccuracyConfig(
                 priority = LocationRequest.PRIORITY_LOW_POWER,
-                interval = 15000L, // 15秒
-                fastestInterval = 10000L, // 10秒
+                interval = 30000L, // 30秒 - 进一步降低更新频率
+                fastestInterval = 20000L, // 20秒
                 smallestDisplacement = 10f, // 10米
-                maxWaitTime = 30000L, // 30秒
+                maxWaitTime = 60000L, // 60秒 - 增加等待时间
                 enableBatching = true,
                 enableBackgroundLocation = false
             )
@@ -91,10 +91,10 @@ class GpsAccuracyOptimizer(private val context: Context) {
             
             AccuracyMode.INDOOR_NAVIGATION -> AccuracyConfig(
                 priority = LocationRequest.PRIORITY_LOW_POWER, // 室内模式使用低功耗
-                interval = 15000L, // 15秒 - 降低更新频率
-                fastestInterval = 10000L, // 10秒
+                interval = 60000L, // 60秒 - 与环境检测周期同步，大幅降低更新频率
+                fastestInterval = 30000L, // 30秒
                 smallestDisplacement = 10f, // 10米 - 降低精度要求
-                maxWaitTime = 30000L, // 30秒
+                maxWaitTime = 120000L, // 120秒 - 增加等待时间
                 enableBatching = true,
                 enableBackgroundLocation = false
             )
