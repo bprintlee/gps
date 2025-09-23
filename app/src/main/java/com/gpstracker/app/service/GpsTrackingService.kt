@@ -56,6 +56,10 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private var stepCount = 0
     private var lastAcceleration = 0f
     
+    // 步数管理
+    private var initialStepCount = 0 // 应用启动时的步数基准值
+    private var stepIncreaseSinceStart = 0 // 自启动以来的步数增加量
+    
     // 行程管理
     private var currentTripId: String? = null
     private var isTripActive = false
@@ -77,7 +81,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private val deepStationaryStepThreshold = 30 // 30步阈值退出深度静止
     private val deepStationaryAccelerationThreshold = 1.5f // 深度静止状态加速度阈值
     private var lastMovementTime = 0L // 最后移动时间
-    private var initialStepCount = 0 // 进入深度静止时的步数
+    private var deepStationaryInitialStepCount = 0 // 进入深度静止时的步数
     private var isInDeepStationary = false // 是否处于深度静止状态
     
     // 深度静止状态统计
@@ -127,7 +131,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             // 初始化深度静止状态相关变量
             lastMovementTime = System.currentTimeMillis()
             isInDeepStationary = false
-            initialStepCount = 0
+            deepStationaryInitialStepCount = 0
             
             locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
             android.util.Log.d("GpsTrackingService", "位置管理器初始化完成")
@@ -349,7 +353,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         
         // 检查是否应该退出深度静止状态
         val shouldExitDeepStationary = isInDeepStationary && (
-            (stepCount - initialStepCount) >= deepStationaryStepThreshold ||
+            (stepCount - deepStationaryInitialStepCount) >= deepStationaryStepThreshold ||
             lastAcceleration > deepStationaryAccelerationThreshold
         )
         
@@ -358,7 +362,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             shouldEnterDeepStationary -> {
                 currentState = TrackingState.DEEP_STATIONARY
                 isInDeepStationary = true
-                initialStepCount = stepCount
+                deepStationaryInitialStepCount = stepCount
                 deepStationaryEntryTime = currentTime
                 android.util.Log.d("GpsTrackingService", "进入深度静止状态 - 步数: $stepCount, 加速度: $lastAcceleration")
                 
@@ -380,7 +384,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 val sessionTime = currentTime - deepStationaryEntryTime
                 totalDeepStationaryTime += sessionTime
                 
-                android.util.Log.d("GpsTrackingService", "退出深度静止状态 - 步数增加: ${stepCount - initialStepCount}, 加速度: $lastAcceleration, 本次持续时间: ${sessionTime/1000}秒")
+                android.util.Log.d("GpsTrackingService", "退出深度静止状态 - 步数增加: ${stepCount - deepStationaryInitialStepCount}, 加速度: $lastAcceleration, 本次持续时间: ${sessionTime/1000}秒")
                 
                 // 重新启动GPS更新并进行环境检测
                 startLocationUpdates()
@@ -420,14 +424,14 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             }
             
             // 3. 步数检测（活跃状态）
-            stepCount >= stepThreshold -> {
+            stepIncreaseSinceStart >= stepThreshold -> {
                 currentState = TrackingState.ACTIVE
                 // 不立即设置isGpsAvailable为true，等待GPS信号确认
                 lastMovementTime = currentTime
                 // 记录活跃状态开始时的位置和时间
                 activeStateStartLocation = lastLocation
                 activeStateStartTime = currentTime
-                android.util.Log.d("GpsTrackingService", "步数达到阈值，切换到活跃状态 - 步数: $stepCount")
+                android.util.Log.d("GpsTrackingService", "步数达到阈值，切换到活跃状态 - 步数增加: $stepIncreaseSinceStart, 当前累计: $stepCount")
             }
             
              // 4. 活跃状态切换到室内状态的检查
@@ -747,6 +751,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 // 首次接收到步数时，将其作为基准值
                 if (stepCount == 0) {
                     stepCount = newStepCount
+                    initialStepCount = newStepCount
+                    stepIncreaseSinceStart = 0
                     android.util.Log.d("GpsTrackingService", "初始化步数基准值: $stepCount")
                     return
                 }
@@ -755,12 +761,13 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 if (newStepCount > stepCount) {
                     val stepIncrease = newStepCount - stepCount
                     stepCount = newStepCount
+                    stepIncreaseSinceStart = stepCount - initialStepCount
                     
-                    android.util.Log.d("GpsTrackingService", "步数增加: +$stepIncrease, 当前累计: $stepCount")
+                    android.util.Log.d("GpsTrackingService", "步数增加: +$stepIncrease, 当前累计: $stepCount, 自启动增加: $stepIncreaseSinceStart")
                     
                     // 在深度静止状态下，记录步数增加
                     if (isInDeepStationary) {
-                        val totalStepIncrease = stepCount - initialStepCount
+                        val totalStepIncrease = stepCount - deepStationaryInitialStepCount
                         android.util.Log.d("GpsTrackingService", "深度静止状态检测到步数增加: +$stepIncrease, 总计: $totalStepIncrease")
                     }
                 }
@@ -921,6 +928,10 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
              "maxDistance" to maxDistance,
              "distanceToFiveMinutesAgo" to distanceToFiveMinutesAgo,
              "locationHistorySize" to synchronized(locationHistory) { locationHistory.size },
+             "stepCount" to stepCount,
+             "initialStepCount" to initialStepCount,
+             "stepIncreaseSinceStart" to stepIncreaseSinceStart,
+             "stepThreshold" to stepThreshold,
              "gpsTimeoutMs" to gpsTimeoutMs,
              "activeStateTimeoutMs" to activeStateTimeoutMs,
              "activeStateDistanceThreshold" to activeStateDistanceThreshold,
@@ -933,7 +944,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     // 深度静止状态相关方法
     fun isInDeepStationary(): Boolean = isInDeepStationary
     fun getInitialStepCount(): Int = initialStepCount
-    fun getStepIncreaseSinceDeepStationary(): Int = if (isInDeepStationary) stepCount - initialStepCount else 0
+    fun getStepIncreaseSinceStart(): Int = stepIncreaseSinceStart
+    fun getStepIncreaseSinceDeepStationary(): Int = if (isInDeepStationary) stepCount - deepStationaryInitialStepCount else 0
     fun getLastMovementTime(): Long = lastMovementTime
     fun getTimeInDeepStationary(): Long = if (isInDeepStationary) System.currentTimeMillis() - deepStationaryEntryTime else 0
     fun getTotalDeepStationaryTime(): Long = totalDeepStationaryTime + if (isInDeepStationary) getTimeInDeepStationary() else 0
