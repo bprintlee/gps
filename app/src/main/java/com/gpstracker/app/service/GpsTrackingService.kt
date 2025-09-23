@@ -450,8 +450,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                      // 满足任一条件就切换到室内状态：
                      // 1. 当前与5分钟前位置距离 ≤ 200米
                      // 2. 或者 45秒内没有GPS信号
+                     val gpsTimeout = (currentTime - lastGpsTime) > gpsTimeoutMs
                      val shouldSwitchToIndoor = (distanceToFiveMinutesAgo <= activeStateDistanceThreshold) || 
-                                               (timeSinceLastMovement > gpsTimeoutMs)
+                                               gpsTimeout
                      
                      if (shouldSwitchToIndoor) {
                          currentState = TrackingState.INDOOR
@@ -461,7 +462,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                          val reason = if (distanceToFiveMinutesAgo <= activeStateDistanceThreshold) {
                              "距离条件: ${distanceToFiveMinutesAgo}m ≤ ${activeStateDistanceThreshold}m"
                          } else {
-                             "GPS超时: ${timeSinceLastMovement/1000}秒 > ${gpsTimeoutMs/1000}秒"
+                             "GPS超时: ${(currentTime - lastGpsTime)/1000}秒 > ${gpsTimeoutMs/1000}秒"
                          }
                          
                          android.util.Log.d("GpsTrackingService", "活跃状态切换到室内 - $reason, 活跃时间: ${timeInActiveState/1000}秒")
@@ -472,7 +473,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                              startLocationUpdates()
                          }
                      } else {
-                         android.util.Log.d("GpsTrackingService", "活跃状态保持中 - 距离: ${distanceToFiveMinutesAgo}m, GPS超时: ${timeSinceLastMovement/1000}秒, 活跃时间: ${timeInActiveState/1000}秒")
+                         android.util.Log.d("GpsTrackingService", "活跃状态保持中 - 距离: ${distanceToFiveMinutesAgo}m, GPS超时: ${(currentTime - lastGpsTime)/1000}秒, 活跃时间: ${timeInActiveState/1000}秒")
                      }
                  } else {
                      android.util.Log.d("GpsTrackingService", "活跃状态保持中 - 前5分钟不检测, 活跃时间: ${timeInActiveState/1000}秒")
