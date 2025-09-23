@@ -738,19 +738,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             android.util.Log.d("GpsTrackingService", "位置精度不足，跳过MQTT发送 - 精度: ${location.accuracy}m")
         }
         
-        // 每次符合精度要求的结果都立即保存和上报
-        // 不再使用批量保存和定时保存，改为实时保存
-        android.util.Log.d("GpsTrackingService", "GPS数据已处理，精度符合要求，立即保存和上报")
-        
-        // 立即保存当前GPS数据到GPX文件
-        serviceScope.launch {
-            try {
-                gpxExporter.appendGpsData(listOf(gpsData))
-                android.util.Log.d("GpsTrackingService", "成功保存当前GPS点到GPX文件")
-            } catch (e: Exception) {
-                android.util.Log.e("GpsTrackingService", "保存当前GPS数据失败", e)
-            }
-        }
+        // 每次符合精度要求的结果都立即保存到数据库和上报到MQTT
+        // 不再直接保存到GPX文件，统一保存到数据库，行程结束时手动生成GPX文件
+        android.util.Log.d("GpsTrackingService", "GPS数据已处理，精度符合要求，已保存到数据库和上报到MQTT")
     }
     
     override fun onSensorChanged(event: SensorEvent?) {
@@ -802,22 +792,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     
     private suspend fun saveGpsData() {
-        try {
-            // 获取累积的所有数据的副本
-            val allDataCopy = synchronized(allGpsData) {
-                allGpsData.toList()
-            }
-            
-            if (allDataCopy.isNotEmpty()) {
-                // 在同步块外调用挂起函数
-                gpxExporter.appendGpsData(allDataCopy)
-                android.util.Log.d("GpsTrackingService", "成功保存 ${allDataCopy.size} 个GPS点到GPX文件")
-            } else {
-                android.util.Log.w("GpsTrackingService", "没有GPS数据需要保存")
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("GpsTrackingService", "保存GPX数据失败", e)
-        }
+        // 此方法已废弃，GPS数据现在直接保存到数据库
+        // GPX文件将在行程结束时手动生成
+        android.util.Log.d("GpsTrackingService", "saveGpsData方法已废弃，GPS数据直接保存到数据库")
     }
     
     private fun createNotificationChannel() {
@@ -896,22 +873,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         // 断开MQTT连接
         mqttManager.cleanup()
         
-        // 保存所有剩余数据
-        try {
-            val allDataCopy = synchronized(allGpsData) {
-                allGpsData.toList()
-            }
-            
-            if (allDataCopy.isNotEmpty()) {
-                // 使用 runBlocking 在非协程上下文中调用挂起函数
-                runBlocking {
-                    gpxExporter.appendGpsData(allDataCopy)
-                }
-                android.util.Log.d("GpsTrackingService", "服务停止时保存了 ${allDataCopy.size} 个GPS点")
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("GpsTrackingService", "服务停止时保存数据失败", e)
-        }
+        // GPS数据已实时保存到数据库，无需在服务停止时额外保存
+        android.util.Log.d("GpsTrackingService", "服务停止，GPS数据已实时保存到数据库")
         
         serviceScope.cancel()
     }
