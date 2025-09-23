@@ -88,7 +88,7 @@ object PackageInfoHelper {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_ACTIVITIES)
             if (packageInfo != null && packageInfo.versionName != null) {
                 Log.d(TAG, "替代方法成功获取版本名称: ${packageInfo.versionName}")
-                packageInfo.versionName
+                packageInfo.versionName!!
             } else {
                 Log.w(TAG, "替代方法也返回null")
                 "未知"
