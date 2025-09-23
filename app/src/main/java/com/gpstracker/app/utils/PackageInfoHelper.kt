@@ -3,6 +3,7 @@ package com.gpstracker.app.utils
 import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 
 /**
@@ -53,7 +54,24 @@ object PackageInfoHelper {
      * @return 版本代码或0
      */
     fun getVersionCode(context: Context): Long {
-        return getPackageInfo(context)?.longVersionCode ?: 0L
+        return try {
+            val packageInfo = getPackageInfo(context)
+            if (packageInfo != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    // API 28+ 使用 longVersionCode
+                    packageInfo.longVersionCode
+                } else {
+                    // API 24-27 使用 versionCode (int)
+                    @Suppress("DEPRECATION")
+                    packageInfo.versionCode.toLong()
+                }
+            } else {
+                0L
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "获取版本代码失败", e)
+            0L
+        }
     }
     
     /**
@@ -93,7 +111,8 @@ object PackageInfoHelper {
         return try {
             val packageInfo = getPackageInfo(context)
             if (packageInfo != null) {
-                "包名: ${packageInfo.packageName}, 版本: ${packageInfo.versionName} (${packageInfo.longVersionCode})"
+                val versionCode = getVersionCode(context)
+                "包名: ${packageInfo.packageName}, 版本: ${packageInfo.versionName} ($versionCode)"
             } else {
                 "包名: ${getPackageName(context)}, 版本: 获取失败"
             }
