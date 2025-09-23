@@ -17,6 +17,7 @@ import com.gpstracker.app.service.GpsTrackingService
 import com.gpstracker.app.model.TrackingState
 import com.gpstracker.app.utils.EnhancedCrashHandler
 import com.gpstracker.app.utils.GpsAccuracyOptimizer
+import com.gpstracker.app.utils.BackgroundGpsTest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
@@ -138,6 +139,12 @@ class MainActivity : AppCompatActivity() {
         binding.settingsButton.setOnClickListener {
             val intent = Intent(this, SettingsActivity::class.java)
             startActivity(intent)
+        }
+        
+        // 长按设置按钮测试后台GPS功能
+        binding.settingsButton.setOnLongClickListener {
+            testBackgroundGpsFunctionality()
+            true
         }
         
         // MQTT测试功能和GPS精度检查功能已删除
@@ -276,6 +283,35 @@ class MainActivity : AppCompatActivity() {
         } else {
             // 服务未运行
             updateStatusDisplay(null, false, 0, 0f, false, null, false, null)
+        }
+    }
+    
+    /**
+     * 测试后台GPS功能
+     */
+    private fun testBackgroundGpsFunctionality() {
+        if (!isServiceRunning()) {
+            Toast.makeText(this, "GPS服务未运行，请先启动跟踪", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        Toast.makeText(this, "开始测试后台GPS功能...", Toast.LENGTH_SHORT).show()
+        
+        BackgroundGpsTest.testBackgroundGpsData(this) { result ->
+            runOnUiThread {
+                val message = if (result.success) {
+                    "后台GPS测试成功！\n" +
+                    "状态: ${result.currentState}\n" +
+                    "GPS可用: ${result.isGpsAvailable}\n" +
+                    "数据点数: ${result.gpsDataCount}\n" +
+                    "行程数: ${result.allTripIds.size}"
+                } else {
+                    "后台GPS测试失败: ${result.message}"
+                }
+                
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                Log.d("MainActivity", "后台GPS测试结果: $result")
+            }
         }
     }
     
