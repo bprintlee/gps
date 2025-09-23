@@ -182,9 +182,14 @@ class SettingsActivityDetailed : AppCompatActivity() {
         // 深度静止设置监听器
         deepStationaryTimeoutSeekBar.setOnSeekBarChangeListener(createSeekBarListener(deepStationaryTimeoutValue, "分钟"))
         deepStationaryStepSeekBar.setOnSeekBarChangeListener(createSeekBarListener(deepStationaryStepValue, "步"))
-        deepStationaryAccelerationSeekBar.setOnSeekBarChangeListener { _, progress, _ ->
-            deepStationaryAccelerationValue.text = "${(progress / 10.0f)}m/s²"
-        }
+        deepStationaryAccelerationSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                deepStationaryAccelerationValue.text = "${(progress / 10.0f)}m/s²"
+            }
+            
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
         
         // 驾驶模式设置监听器
         drivingSpeedSeekBar.setOnSeekBarChangeListener(createSeekBarListener(drivingSpeedValue, "km/h"))
