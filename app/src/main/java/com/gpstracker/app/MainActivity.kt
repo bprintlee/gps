@@ -251,6 +251,10 @@ class MainActivity : AppCompatActivity() {
                                     gpsService.isTripActive(),
                                     gpsService.getMqttConnectionInfo()
                                 )
+                                
+                                // 添加调试信息
+                                val debugInfo = gpsService.getDebugInfo()
+                                android.util.Log.d("MainActivity", "状态调试信息: $debugInfo")
                                 unbindService(this)
                             }
                         }

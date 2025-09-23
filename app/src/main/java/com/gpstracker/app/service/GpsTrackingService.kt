@@ -799,6 +799,29 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     fun getLastAcceleration(): Float = lastAcceleration
     fun isPowerSaveMode(): Boolean = isPowerSaveMode
     fun getLastLocation(): Location? = lastLocation
+    
+    // 调试信息方法
+    fun getDebugInfo(): Map<String, Any> {
+        val currentTime = System.currentTimeMillis()
+        val timeSinceLastMovement = currentTime - lastMovementTime
+        val timeInActiveState = if (currentState == TrackingState.ACTIVE) currentTime - activeStateStartTime else 0L
+        val maxDistance = if (activeStateStartLocation != null && lastLocation != null) {
+            activeStateStartLocation!!.distanceTo(lastLocation!!)
+        } else 0f
+        
+        return mapOf(
+            "currentState" to currentState.name,
+            "isGpsAvailable" to isGpsAvailable,
+            "timeSinceLastMovement" to timeSinceLastMovement,
+            "timeInActiveState" to timeInActiveState,
+            "maxDistance" to maxDistance,
+            "gpsTimeoutMs" to gpsTimeoutMs,
+            "activeStateTimeoutMs" to activeStateTimeoutMs,
+            "activeStateDistanceThreshold" to activeStateDistanceThreshold,
+            "lastGpsTime" to lastGpsTime,
+            "activeStateStartTime" to activeStateStartTime
+        )
+    }
     fun getGpxDirectoryPath(): String = gpxExporter.getGpxDirectoryPath().absolutePath
     
     // 深度静止状态相关方法
