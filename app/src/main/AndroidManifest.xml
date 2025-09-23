@@ -67,7 +67,7 @@
             android:name=".LogViewerActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity"
-            android:theme="@style/Theme.GPSTracker" />
+            android:theme="@style/Theme.GPSTracker.NoActionBar" />
             
         <activity
             android:name=".DebugActivity"
@@ -85,13 +85,13 @@
             android:name=".SettingsActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity"
-            android:theme="@style/Theme.GPSTracker" />
+            android:theme="@style/Theme.GPSTracker.NoActionBar" />
             
         <activity
             android:name=".SettingsActivitySimple"
             android:exported="false"
             android:parentActivityName=".MainActivity"
-            android:theme="@style/Theme.GPSTracker" />
+            android:theme="@style/Theme.GPSTracker.NoActionBar" />
         
         <!-- GPS跟踪服务 -->
         <service
