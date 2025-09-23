@@ -31,14 +31,19 @@ class GPSTrackerApplication : Application() {
             Log.d("GPSTrackerApp", "旧崩溃日志清理完成")
             
             // 确保应用上下文正确初始化
-            val appInfo = PackageInfoHelper.getAppInfoSummary(this)
-            Log.d("GPSTrackerApp", "应用信息: $appInfo")
-            
-            // 如果PackageInfo获取失败，运行诊断
-            if (appInfo.contains("获取失败")) {
-                Log.w("GPSTrackerApp", "PackageInfo获取失败，运行诊断...")
-                val diagnostics = PackageInfoHelper.diagnosePackageInfo(this)
-                Log.w("GPSTrackerApp", diagnostics)
+            try {
+                val appInfo = PackageInfoHelper.getAppInfoSummarySafe(this)
+                Log.d("GPSTrackerApp", "应用信息: $appInfo")
+                
+                // 如果PackageInfo获取失败，运行诊断
+                if (appInfo.contains("获取失败")) {
+                    Log.w("GPSTrackerApp", "PackageInfo获取失败，运行诊断...")
+                    val diagnostics = PackageInfoHelper.diagnosePackageInfo(this)
+                    Log.w("GPSTrackerApp", diagnostics)
+                }
+            } catch (e: Exception) {
+                Log.w("GPSTrackerApp", "应用信息获取失败，可能正在安装中: ${e.message}")
+                // 在安装过程中，不进行PackageInfo相关操作
             }
             
             Log.d("GPSTrackerApp", "=== Application初始化完成 ===")
