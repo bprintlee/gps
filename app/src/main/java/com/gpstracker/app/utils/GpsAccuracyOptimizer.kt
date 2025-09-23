@@ -37,6 +37,7 @@ class GpsAccuracyOptimizer(private val context: Context) {
         BALANCED,           // 平衡模式 - 精度和电量平衡
         POWER_SAVE,         // 省电模式 - 降低精度节省电量
         OUTDOOR_ACTIVITY,   // 户外活动模式 - 运动时使用
+        DRIVING,            // 驾驶模式 - 驾驶时使用
         INDOOR_NAVIGATION   // 室内导航模式 - 室内使用
     }
     
@@ -81,10 +82,20 @@ class GpsAccuracyOptimizer(private val context: Context) {
             
             AccuracyMode.OUTDOOR_ACTIVITY -> AccuracyConfig(
                 priority = LocationRequest.PRIORITY_HIGH_ACCURACY,
-                interval = 2000L, // 2秒 - 提高活跃状态下的更新频率
-                fastestInterval = 1000L, // 1秒
+                interval = 10000L, // 10秒 - 活跃模式间隔
+                fastestInterval = 5000L, // 5秒
                 smallestDisplacement = 1f, // 1米
-                maxWaitTime = 5000L, // 5秒
+                maxWaitTime = 15000L, // 15秒
+                enableBatching = false,
+                enableBackgroundLocation = true
+            )
+            
+            AccuracyMode.DRIVING -> AccuracyConfig(
+                priority = LocationRequest.PRIORITY_HIGH_ACCURACY,
+                interval = 4000L, // 4秒 - 驾驶模式间隔
+                fastestInterval = 2000L, // 2秒
+                smallestDisplacement = 1f, // 1米
+                maxWaitTime = 8000L, // 8秒
                 enableBatching = false,
                 enableBackgroundLocation = true
             )

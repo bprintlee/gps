@@ -229,6 +229,10 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                     android.util.Log.d("GpsTrackingService", "活跃状态，使用户外活动模式")
                     GpsAccuracyOptimizer.AccuracyMode.OUTDOOR_ACTIVITY
                 }
+                currentState == TrackingState.DRIVING -> {
+                    android.util.Log.d("GpsTrackingService", "驾驶状态，使用驾驶模式")
+                    GpsAccuracyOptimizer.AccuracyMode.DRIVING
+                }
                 isPowerSaveMode -> {
                     android.util.Log.d("GpsTrackingService", "使用省电模式")
                     GpsAccuracyOptimizer.AccuracyMode.POWER_SAVE
@@ -325,15 +329,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             }
         }
         
-        // 启动定时保存任务
-        serviceScope.launch {
-            while (isActive) {
-                delay(30000) // 每30秒保存一次
-                if (synchronized(allGpsData) { allGpsData.isNotEmpty() }) {
-                    saveGpsData()
-                }
-            }
-        }
+        // 定时保存任务已移除，改为实时保存
+        // 每次GPS位置更新时都会立即保存符合精度要求的数据
     }
     
     private fun checkPowerSaveMode() {
@@ -741,32 +738,17 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             android.util.Log.d("GpsTrackingService", "位置精度不足，跳过MQTT发送 - 精度: ${location.accuracy}m")
         }
         
-        // 根据模式和状态调整保存频率
-        val saveThreshold = when {
-            currentState == TrackingState.ACTIVE -> 1 // 活跃状态：每个点都保存
-            currentState == TrackingState.DRIVING -> 2 // 驾驶状态：每2个点保存一次
-            currentState == TrackingState.OUTDOOR -> 3 // 室外状态：每3个点保存一次
-            isPowerSaveMode -> 5 // 省电模式：每5个点保存一次
-            else -> 3 // 持续记录模式：每3个点保存一次
-        }
-        if (gpsDataQueue.size >= saveThreshold) {
-            serviceScope.launch {
-                saveGpsData()
-            }
-        }
+        // 每次符合精度要求的结果都立即保存和上报
+        // 不再使用批量保存和定时保存，改为实时保存
+        android.util.Log.d("GpsTrackingService", "GPS数据已处理，精度符合要求，立即保存和上报")
         
-        // 根据状态调整定时保存频率
-        val currentTime = System.currentTimeMillis()
-        val saveInterval = when {
-            currentState == TrackingState.ACTIVE -> 5000L // 活跃状态：每5秒保存一次
-            currentState == TrackingState.DRIVING -> 10000L // 驾驶状态：每10秒保存一次
-            currentState == TrackingState.OUTDOOR -> 15000L // 室外状态：每15秒保存一次
-            else -> 30000L // 其他状态：每30秒保存一次
-        }
-        
-        if (currentTime - lastGpsTime > saveInterval) {
-            serviceScope.launch {
-                saveGpsData()
+        // 立即保存当前GPS数据到GPX文件
+        serviceScope.launch {
+            try {
+                gpxExporter.appendGpsData(listOf(gpsData))
+                android.util.Log.d("GpsTrackingService", "成功保存当前GPS点到GPX文件")
+            } catch (e: Exception) {
+                android.util.Log.e("GpsTrackingService", "保存当前GPS数据失败", e)
             }
         }
     }
