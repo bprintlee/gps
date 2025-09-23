@@ -712,17 +712,30 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             android.util.Log.d("GpsTrackingService", "位置精度不足，跳过MQTT发送 - 精度: ${location.accuracy}m")
         }
         
-        // 根据模式调整保存频率
-        val saveThreshold = if (isPowerSaveMode) 5 else 3 // 省电模式5个点保存一次，持续记录模式3个点保存一次
+        // 根据模式和状态调整保存频率
+        val saveThreshold = when {
+            currentState == TrackingState.ACTIVE -> 2 // 活跃状态：每2个点保存一次
+            currentState == TrackingState.DRIVING -> 2 // 驾驶状态：每2个点保存一次
+            currentState == TrackingState.OUTDOOR -> 3 // 室外状态：每3个点保存一次
+            isPowerSaveMode -> 5 // 省电模式：每5个点保存一次
+            else -> 3 // 持续记录模式：每3个点保存一次
+        }
         if (gpsDataQueue.size >= saveThreshold) {
             serviceScope.launch {
                 saveGpsData()
             }
         }
         
-        // 确保至少每30秒保存一次数据
+        // 根据状态调整定时保存频率
         val currentTime = System.currentTimeMillis()
-        if (currentTime - lastGpsTime > 30000) {
+        val saveInterval = when {
+            currentState == TrackingState.ACTIVE -> 10000L // 活跃状态：每10秒保存一次
+            currentState == TrackingState.DRIVING -> 10000L // 驾驶状态：每10秒保存一次
+            currentState == TrackingState.OUTDOOR -> 15000L // 室外状态：每15秒保存一次
+            else -> 30000L // 其他状态：每30秒保存一次
+        }
+        
+        if (currentTime - lastGpsTime > saveInterval) {
             serviceScope.launch {
                 saveGpsData()
             }
