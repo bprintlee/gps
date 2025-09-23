@@ -88,11 +88,259 @@
 
             </LinearLayout>
 
+            <!-- 活跃状态设置 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="活跃状态设置"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- 活跃状态超时时间 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="活跃状态超时时间"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/activeTimeoutValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="30秒"
+                    android:textSize="16sp"
+                    android:layout_marginEnd="8dp" />
+
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/activeTimeoutSeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="300"
+                android:min="10"
+                android:progress="30"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 活跃状态距离阈值 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="活跃状态距离阈值"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/activeDistanceValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="50米"
+                    android:textSize="16sp"
+                    android:layout_marginEnd="8dp" />
+
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/activeDistanceSeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="200"
+                android:min="10"
+                android:progress="50"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 室内状态设置 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="室内状态设置"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- 室内到室外步数阈值 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="室内到室外步数阈值"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/indoorStepValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="10步"
+                    android:textSize="16sp"
+                    android:layout_marginEnd="8dp" />
+
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/indoorStepSeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="50"
+                android:min="1"
+                android:progress="10"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 驾驶状态设置 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="驾驶状态设置"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- 活跃到驾驶速度阈值 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="活跃到驾驶速度阈值"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/drivingSpeedValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="5.0km/h"
+                    android:textSize="16sp"
+                    android:layout_marginEnd="8dp" />
+
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/drivingSpeedSeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="200"
+                android:min="10"
+                android:progress="50"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 深度静止状态设置 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="深度静止状态设置"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- 深度静止加速度阈值 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="深度静止加速度阈值"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/deepAccelerationValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0.5m/s²"
+                    android:textSize="16sp"
+                    android:layout_marginEnd="8dp" />
+
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/deepAccelerationSeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="50"
+                android:min="1"
+                android:progress="5"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 环境检测设置 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="环境检测设置"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- 环境检测间隔 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="环境检测间隔"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/envIntervalValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="30秒"
+                    android:textSize="16sp"
+                    android:layout_marginEnd="8dp" />
+
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/envIntervalSeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="300"
+                android:min="5"
+                android:progress="30"
+                android:layout_marginBottom="16dp" />
+
             <!-- 说明文字 -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="设置说明：\n• GPS超时时间：GPS信号获取的超时时间\n• 省电模式：启用后降低GPS更新频率以节省电量"
+                android:text="设置说明：\n• GPS超时时间：GPS信号获取的超时时间\n• 省电模式：启用后降低GPS更新频率以节省电量\n• 活跃状态：户外活动时的状态设置\n• 室内状态：室内环境的状态设置\n• 驾驶状态：驾驶时的状态设置\n• 深度静止：长时间静止时的状态设置\n• 环境检测：检测室内外环境的间隔时间"
                 android:textSize="14sp"
                 android:textColor="@android:color/darker_gray"
                 android:layout_marginTop="16dp" />
