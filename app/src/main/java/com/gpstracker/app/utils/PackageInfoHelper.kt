@@ -213,23 +213,37 @@ object PackageInfoHelper {
             
             if (packageManager != null) {
                 // 尝试不同的方法获取PackageInfo
-                val methods = listOf(
-                    "标准方法(flags=0)" to { packageManager.getPackageInfo(context.packageName, 0) },
-                    "GET_ACTIVITIES" to { packageManager.getPackageInfo(context.packageName, PackageManager.GET_ACTIVITIES) },
-                    "GET_META_DATA" to { packageManager.getPackageInfo(context.packageName, PackageManager.GET_META_DATA) }
-                )
-                
-                for ((methodName, method) in methods) {
-                    try {
-                        val packageInfo = method()
-                        diagnostics.appendLine("$methodName: ${if (packageInfo != null) "成功" else "返回null"}")
-                        if (packageInfo != null) {
-                            diagnostics.appendLine("  - 版本名: ${packageInfo.versionName}")
-                            diagnostics.appendLine("  - 包名: ${packageInfo.packageName}")
-                        }
-                    } catch (e: Exception) {
-                        diagnostics.appendLine("$methodName: 失败 - ${e.javaClass.simpleName}: ${e.message}")
+                try {
+                    val packageInfo1 = packageManager.getPackageInfo(context.packageName, 0)
+                    diagnostics.appendLine("标准方法(flags=0): ${if (packageInfo1 != null) "成功" else "返回null"}")
+                    if (packageInfo1 != null) {
+                        diagnostics.appendLine("  - 版本名: ${packageInfo1.versionName}")
+                        diagnostics.appendLine("  - 包名: ${packageInfo1.packageName}")
                     }
+                } catch (e: Exception) {
+                    diagnostics.appendLine("标准方法(flags=0): 失败 - ${e.javaClass.simpleName}: ${e.message}")
+                }
+                
+                try {
+                    val packageInfo2 = packageManager.getPackageInfo(context.packageName, PackageManager.GET_ACTIVITIES)
+                    diagnostics.appendLine("GET_ACTIVITIES: ${if (packageInfo2 != null) "成功" else "返回null"}")
+                    if (packageInfo2 != null) {
+                        diagnostics.appendLine("  - 版本名: ${packageInfo2.versionName}")
+                        diagnostics.appendLine("  - 包名: ${packageInfo2.packageName}")
+                    }
+                } catch (e: Exception) {
+                    diagnostics.appendLine("GET_ACTIVITIES: 失败 - ${e.javaClass.simpleName}: ${e.message}")
+                }
+                
+                try {
+                    val packageInfo3 = packageManager.getPackageInfo(context.packageName, PackageManager.GET_META_DATA)
+                    diagnostics.appendLine("GET_META_DATA: ${if (packageInfo3 != null) "成功" else "返回null"}")
+                    if (packageInfo3 != null) {
+                        diagnostics.appendLine("  - 版本名: ${packageInfo3.versionName}")
+                        diagnostics.appendLine("  - 包名: ${packageInfo3.packageName}")
+                    }
+                } catch (e: Exception) {
+                    diagnostics.appendLine("GET_META_DATA: 失败 - ${e.javaClass.simpleName}: ${e.message}")
                 }
             }
             
