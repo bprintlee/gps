@@ -427,46 +427,67 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 android.util.Log.d("GpsTrackingService", "步数达到阈值，切换到活跃状态 - 步数: $stepCount")
             }
             
-             // 4. GPS超时检查（降低优先级，避免覆盖驾驶模式）
-             gpsTimeout -> {
-                 // 只有在非驾驶模式下才切换到室内
-                 if (!isInDrivingMode) {
-                     // 如果当前是活跃状态，需要检查时间和距离条件
-                     if (currentState == TrackingState.ACTIVE) {
-                         val timeSinceLastMovement = currentTime - lastMovementTime
-                         val timeInActiveState = currentTime - activeStateStartTime
-                         
-                         // 检查距离条件：当前与5分钟前（或大于5分钟的第一个坐标）的距离
-                         val distanceToFiveMinutesAgo = if (lastLocation != null) {
-                             val locationFiveMinutesAgo = getLocationFiveMinutesAgo()
-                             if (locationFiveMinutesAgo != null) {
-                                 locationFiveMinutesAgo.distanceTo(lastLocation!!)
-                             } else {
-                                 0f
-                             }
+             // 4. 活跃状态切换到室内状态的检查
+             currentState == TrackingState.ACTIVE -> {
+                 val timeInActiveState = currentTime - activeStateStartTime
+                 
+                 // 活跃状态下，前5分钟不检测
+                 if (timeInActiveState > activeStateTimeoutMs) {
+                     val timeSinceLastMovement = currentTime - lastMovementTime
+                     
+                     // 检查距离条件：当前与5分钟前位置的距离
+                     val distanceToFiveMinutesAgo = if (lastLocation != null) {
+                         val locationFiveMinutesAgo = getLocationFiveMinutesAgo()
+                         if (locationFiveMinutesAgo != null) {
+                             locationFiveMinutesAgo.distanceTo(lastLocation!!)
                          } else {
                              0f
                          }
-                         
-                         // 满足条件：GPS超时45秒 且 活跃状态持续超过5分钟
-                         if (timeSinceLastMovement > gpsTimeoutMs && 
-                             timeInActiveState > activeStateTimeoutMs) {
-                             // 检查距离条件：当前与5分钟前位置的距离不超过200米
-                             if (distanceToFiveMinutesAgo <= activeStateDistanceThreshold) {
-                                 currentState = TrackingState.INDOOR
-                                 isGpsAvailable = false
-                                 android.util.Log.d("GpsTrackingService", "活跃状态切换到室内 - GPS超时: ${timeSinceLastMovement/1000}秒, 活跃时间: ${timeInActiveState/1000}秒, 距离: ${distanceToFiveMinutesAgo}m")
-                             } else {
-                                 android.util.Log.d("GpsTrackingService", "活跃状态保持中 - 距离条件不满足: ${distanceToFiveMinutesAgo}m > ${activeStateDistanceThreshold}m")
-                             }
-                         } else {
-                             android.util.Log.d("GpsTrackingService", "活跃状态保持中 - GPS超时: ${timeSinceLastMovement/1000}秒, 活跃时间: ${timeInActiveState/1000}秒")
-                         }
                      } else {
+                         0f
+                     }
+                     
+                     // 满足任一条件就切换到室内状态：
+                     // 1. 当前与5分钟前位置距离 ≤ 200米
+                     // 2. 或者 45秒内没有GPS信号
+                     val shouldSwitchToIndoor = (distanceToFiveMinutesAgo <= activeStateDistanceThreshold) || 
+                                               (timeSinceLastMovement > gpsTimeoutMs)
+                     
+                     if (shouldSwitchToIndoor) {
                          currentState = TrackingState.INDOOR
                          isGpsAvailable = false
+                         lastMovementTime = currentTime
+                         
+                         val reason = if (distanceToFiveMinutesAgo <= activeStateDistanceThreshold) {
+                             "距离条件: ${distanceToFiveMinutesAgo}m ≤ ${activeStateDistanceThreshold}m"
+                         } else {
+                             "GPS超时: ${timeSinceLastMovement/1000}秒 > ${gpsTimeoutMs/1000}秒"
+                         }
+                         
+                         android.util.Log.d("GpsTrackingService", "活跃状态切换到室内 - $reason, 活跃时间: ${timeInActiveState/1000}秒")
+                         
+                         // 室内状态时降低GPS更新频率
+                         if (!isPowerSaveMode) {
+                             stopLocationUpdates()
+                             startLocationUpdates()
+                         }
+                     } else {
+                         android.util.Log.d("GpsTrackingService", "活跃状态保持中 - 距离: ${distanceToFiveMinutesAgo}m, GPS超时: ${timeSinceLastMovement/1000}秒, 活跃时间: ${timeInActiveState/1000}秒")
                      }
+                 } else {
+                     android.util.Log.d("GpsTrackingService", "活跃状态保持中 - 前5分钟不检测, 活跃时间: ${timeInActiveState/1000}秒")
+                 }
+             }
+             
+             // 5. GPS超时检查（非活跃状态）
+             gpsTimeout -> {
+                 // 只有在非驾驶模式下才切换到室内
+                 if (!isInDrivingMode && currentState != TrackingState.ACTIVE) {
+                     currentState = TrackingState.INDOOR
+                     isGpsAvailable = false
                      lastMovementTime = currentTime
+                     android.util.Log.d("GpsTrackingService", "GPS超时切换到室内状态")
+                     
                      // 室内状态时降低GPS更新频率
                      if (!isPowerSaveMode) {
                          stopLocationUpdates()
@@ -475,7 +496,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                  }
              }
             
-            // 5. GPS可用时切换到室外（需要GPS信号确认）
+            // 6. GPS可用时切换到室外（需要GPS信号确认）
             isGpsAvailable -> {
                 // 只有在活跃状态下且有GPS信号时才切换到室外
                 if (currentState == TrackingState.ACTIVE) {
@@ -488,7 +509,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 }
             }
             
-            // 6. 默认情况
+            // 7. 默认情况
             else -> {
                 currentState = TrackingState.INDOOR
             }
