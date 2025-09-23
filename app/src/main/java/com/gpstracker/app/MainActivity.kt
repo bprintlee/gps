@@ -137,7 +137,7 @@ class MainActivity : AppCompatActivity() {
         }
         
         binding.settingsButton.setOnClickListener {
-            val intent = Intent(this, SettingsActivity::class.java)
+            val intent = Intent(this, SettingsActivitySimple::class.java)
             startActivity(intent)
         }
         

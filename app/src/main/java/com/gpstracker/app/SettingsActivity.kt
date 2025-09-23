@@ -62,25 +62,34 @@ class SettingsActivity : AppCompatActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
         
-        // 设置工具栏
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "GPS跟踪设置"
-        
-        // 初始化SharedPreferences
-        sharedPreferences = getSharedPreferences("gps_tracking_settings", Context.MODE_PRIVATE)
-        
-        // 初始化视图
-        initViews()
-        
-        // 加载当前设置
-        loadCurrentSettings()
-        
-        // 设置监听器
-        setupListeners()
+        try {
+            setContentView(R.layout.activity_settings)
+            
+            // 设置工具栏
+            val toolbar = findViewById<Toolbar>(R.id.toolbar)
+            setSupportActionBar(toolbar)
+            supportActionBar?.setDisplayHomeAsUpEnabled(true)
+            supportActionBar?.title = "GPS跟踪设置"
+            
+            // 初始化SharedPreferences
+            sharedPreferences = getSharedPreferences("gps_tracking_settings", Context.MODE_PRIVATE)
+            
+            // 初始化视图
+            initViews()
+            
+            // 加载当前设置
+            loadCurrentSettings()
+            
+            // 设置监听器
+            setupListeners()
+            
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsActivity", "设置页面初始化失败", e)
+            // 显示错误信息并关闭页面
+            android.widget.Toast.makeText(this, "设置页面加载失败: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            finish()
+        }
     }
     
     private fun initViews() {

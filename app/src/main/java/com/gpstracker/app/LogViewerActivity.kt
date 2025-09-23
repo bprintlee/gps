@@ -36,13 +36,22 @@ class LogViewerActivity : AppCompatActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityLogViewerBinding.inflate(layoutInflater)
-        setContentView(binding.root)
         
-        setupToolbar()
-        setupLogManager()
-        setupRecyclerView()
-        loadRecentLogs()
+        try {
+            binding = ActivityLogViewerBinding.inflate(layoutInflater)
+            setContentView(binding.root)
+            
+            setupToolbar()
+            setupLogManager()
+            setupRecyclerView()
+            loadRecentLogs()
+            
+        } catch (e: Exception) {
+            android.util.Log.e("LogViewerActivity", "日志查看器初始化失败", e)
+            // 显示错误信息并关闭页面
+            android.widget.Toast.makeText(this, "日志查看器加载失败: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            finish()
+        }
     }
     
     private fun setupToolbar() {
