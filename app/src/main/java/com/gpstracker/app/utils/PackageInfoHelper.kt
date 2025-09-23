@@ -44,6 +44,12 @@ object PackageInfoHelper {
                 return null
             }
             
+            // 检查应用是否正在安装中
+            if (isAppInstalling(context)) {
+                Log.w(TAG, "应用正在安装中，PackageInfo可能不可用")
+                return null
+            }
+            
             Log.d(TAG, "尝试获取PackageInfo - 包名: $packageName, flags: $flags")
             
             // 尝试获取PackageInfo
@@ -66,6 +72,49 @@ object PackageInfoHelper {
         } catch (e: Exception) {
             Log.e(TAG, "获取PackageInfo失败: ${e.javaClass.simpleName} - ${e.message}", e)
             null
+        }
+    }
+    
+    /**
+     * 检查应用是否正在安装中
+     * @param context 上下文
+     * @return 是否正在安装
+     */
+    private fun isAppInstalling(context: Context): Boolean {
+        return try {
+            val packageManager = context.packageManager
+            val packageName = context.packageName
+            
+            // 检查应用是否已安装
+            val isInstalled = try {
+                packageManager.getPackageInfo(packageName, 0) != null
+            } catch (e: Exception) {
+                false
+            }
+            
+            // 如果应用未安装，可能正在安装中
+            if (!isInstalled) {
+                Log.d(TAG, "应用未安装，可能正在安装中")
+                return true
+            }
+            
+            // 检查应用是否正在更新
+            try {
+                val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+                // 如果应用信息获取失败，可能正在安装/更新中
+                if (applicationInfo == null) {
+                    Log.d(TAG, "应用信息获取失败，可能正在安装/更新中")
+                    return true
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "获取应用信息失败，可能正在安装/更新中: ${e.message}")
+                return true
+            }
+            
+            false
+        } catch (e: Exception) {
+            Log.d(TAG, "检查安装状态失败: ${e.message}")
+            true // 如果检查失败，假设正在安装中
         }
     }
     
@@ -227,6 +276,11 @@ object PackageInfoHelper {
                 return "应用信息获取失败: 包名为空"
             }
             
+            // 检查应用是否正在安装中
+            if (isAppInstalling(context)) {
+                return "包名: $packageName, 状态: 正在安装中，PackageInfo暂不可用"
+            }
+            
             // 尝试获取PackageInfo
             val packageInfo = getPackageInfo(context)
             if (packageInfo != null) {
@@ -236,7 +290,7 @@ object PackageInfoHelper {
             } else {
                 // PackageInfo获取失败，尝试其他方法
                 val versionName = getVersionNameSimple(context)
-                "包名: $packageName, 版本: $versionName (PackageInfo获取失败)"
+                "包名: $packageName, 版本: $versionName (PackageInfo获取失败，可能正在安装中)"
             }
         } catch (e: Exception) {
             Log.e(TAG, "获取应用信息摘要失败", e)
