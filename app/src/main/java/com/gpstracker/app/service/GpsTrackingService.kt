@@ -66,8 +66,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
     // 配置参数 - 优化省电
-    private val gpsTimeoutMs = 180000L // 3分钟GPS超时，避免频繁切换状态
+    private val gpsTimeoutMs = 45000L // 45秒GPS超时，用于活跃状态切换到室内状态
     private val activeStateTimeoutMs = 300000L // 5分钟活跃状态保持时间，避免频繁切换
+    private val activeStateDistanceThreshold = 200.0f // 200米距离阈值，用于活跃状态切换到室内状态
     private val stepThreshold = 20 // 20步阈值
     private val accelerationThreshold = 2.0f // 加速度阈值
     
@@ -104,6 +105,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     
     // 最后位置信息
     private var lastLocation: Location? = null
+    private var activeStateStartLocation: Location? = null // 活跃状态开始时的位置
+    private var activeStateStartTime = 0L // 活跃状态开始时间
     
     inner class GpsTrackingBinder : Binder() {
         fun getService(): GpsTrackingService = this@GpsTrackingService
@@ -414,6 +417,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 currentState = TrackingState.ACTIVE
                 // 不立即设置isGpsAvailable为true，等待GPS信号确认
                 lastMovementTime = currentTime
+                // 记录活跃状态开始时的位置和时间
+                activeStateStartLocation = lastLocation
+                activeStateStartTime = currentTime
                 android.util.Log.d("GpsTrackingService", "步数达到阈值，切换到活跃状态 - 步数: $stepCount")
             }
             
@@ -421,15 +427,27 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             gpsTimeout -> {
                 // 只有在非驾驶模式下才切换到室内
                 if (!isInDrivingMode) {
-                    // 如果当前是活跃状态，需要更长时间的无GPS信号才切换到室内
+                    // 如果当前是活跃状态，需要检查时间和距离条件
                     if (currentState == TrackingState.ACTIVE) {
                         val timeSinceLastMovement = currentTime - lastMovementTime
-                        if (timeSinceLastMovement > activeStateTimeoutMs) {
+                        val timeInActiveState = currentTime - activeStateStartTime
+                        
+                        // 检查距离条件：活跃状态下5分钟内移动距离不超过200米
+                        val maxDistance = if (activeStateStartLocation != null && lastLocation != null) {
+                            activeStateStartLocation!!.distanceTo(lastLocation!!)
+                        } else {
+                            0f
+                        }
+                        
+                        // 满足条件：GPS超时45秒 且 活跃状态5分钟内移动距离不超过200米
+                        if (timeSinceLastMovement > gpsTimeoutMs && 
+                            timeInActiveState > activeStateTimeoutMs && 
+                            maxDistance <= activeStateDistanceThreshold) {
                             currentState = TrackingState.INDOOR
                             isGpsAvailable = false
-                            android.util.Log.d("GpsTrackingService", "活跃状态超时，切换到室内 - 无移动时间: ${timeSinceLastMovement/1000}秒")
+                            android.util.Log.d("GpsTrackingService", "活跃状态切换到室内 - GPS超时: ${timeSinceLastMovement/1000}秒, 活跃时间: ${timeInActiveState/1000}秒, 最大距离: ${maxDistance}m")
                         } else {
-                            android.util.Log.d("GpsTrackingService", "活跃状态保持中 - 无移动时间: ${timeSinceLastMovement/1000}秒，需要${activeStateTimeoutMs/1000}秒才切换")
+                            android.util.Log.d("GpsTrackingService", "活跃状态保持中 - GPS超时: ${timeSinceLastMovement/1000}秒, 活跃时间: ${timeInActiveState/1000}秒, 最大距离: ${maxDistance}m")
                         }
                     } else {
                         currentState = TrackingState.INDOOR
