@@ -292,6 +292,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         }
         stepCounter?.let {
             sensorManager.registerListener(this, it, sensorDelay)
+            // 初始化步数：获取当前累计步数作为基准
+            // 注意：步数传感器返回的是累计步数，不是从0开始
+            android.util.Log.d("GpsTrackingService", "步数传感器已注册，等待首次步数更新")
         }
     }
     
@@ -741,10 +744,19 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             Sensor.TYPE_STEP_COUNTER -> {
                 val newStepCount = event.values[0].toInt()
                 
+                // 首次接收到步数时，将其作为基准值
+                if (stepCount == 0) {
+                    stepCount = newStepCount
+                    android.util.Log.d("GpsTrackingService", "初始化步数基准值: $stepCount")
+                    return
+                }
+                
                 // 检查步数是否增加
                 if (newStepCount > stepCount) {
                     val stepIncrease = newStepCount - stepCount
                     stepCount = newStepCount
+                    
+                    android.util.Log.d("GpsTrackingService", "步数增加: +$stepIncrease, 当前累计: $stepCount")
                     
                     // 在深度静止状态下，记录步数增加
                     if (isInDeepStationary) {
