@@ -388,7 +388,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             }
             
             // 正常状态转换逻辑 - 重新排序优先级
-            // 1. 首先检查驾驶模式（最高优先级）
+            // 1. 首先检查驾驶模式（最高优先级，适用于所有状态）
             shouldEnterDrivingMode() -> {
                 currentState = TrackingState.DRIVING
                 isGpsAvailable = true
@@ -396,7 +396,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 isInDrivingMode = true
                 drivingEntryTime = currentTime
                 drivingLastLocation = lastLocation
-                android.util.Log.d("GpsTrackingService", "进入驾驶状态 - 速度: ${lastLocation?.speed?.times(3.6f)} km/h")
+                android.util.Log.d("GpsTrackingService", "检测到驾驶速度，切换到驾驶状态 - 速度: ${lastLocation?.speed?.times(3.6f)} km/h")
             }
             
             // 2. 检查是否应该退出驾驶状态
@@ -479,10 +479,22 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
      * 检查是否应该进入驾驶模式
      */
     private fun shouldEnterDrivingMode(): Boolean {
-        return !isInDrivingMode && 
-               lastLocation != null && 
-               lastLocation!!.hasSpeed() && 
-               lastLocation!!.speed * 3.6f >= drivingSpeedThreshold // 转换为km/h
+        if (isInDrivingMode) return false
+        
+        // 需要有效的位置数据
+        if (lastLocation == null) return false
+        
+        // 检查速度信息
+        if (!lastLocation!!.hasSpeed()) return false
+        
+        val speedKmh = lastLocation!!.speed * 3.6f
+        val shouldEnter = speedKmh >= drivingSpeedThreshold
+        
+        if (shouldEnter) {
+            android.util.Log.d("GpsTrackingService", "检测到驾驶速度: ${speedKmh} km/h (阈值: ${drivingSpeedThreshold} km/h)")
+        }
+        
+        return shouldEnter
     }
     
     /**
