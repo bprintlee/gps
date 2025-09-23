@@ -9,6 +9,7 @@ import android.util.Log
 import com.gpstracker.app.utils.CrashHandler
 import com.gpstracker.app.utils.EnhancedCrashHandler
 import com.gpstracker.app.utils.GlobalBroadcastReceiverFix
+import com.gpstracker.app.utils.PackageInfoHelper
 
 class GPSTrackerApplication : Application() {
     
@@ -30,8 +31,8 @@ class GPSTrackerApplication : Application() {
             Log.d("GPSTrackerApp", "旧崩溃日志清理完成")
             
             // 确保应用上下文正确初始化
-            val packageInfo = packageManager.getPackageInfo(packageName, 0)
-            Log.d("GPSTrackerApp", "包信息加载成功: ${packageInfo.versionName}")
+            val appInfo = PackageInfoHelper.getAppInfoSummary(this)
+            Log.d("GPSTrackerApp", "应用信息: $appInfo")
             
             Log.d("GPSTrackerApp", "=== Application初始化完成 ===")
         } catch (e: Exception) {
