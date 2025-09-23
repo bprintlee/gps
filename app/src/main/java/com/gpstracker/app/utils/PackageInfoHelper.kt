@@ -287,7 +287,7 @@ object PackageInfoHelper {
                 diagnostics.appendLine()
                 diagnostics.appendLine("=== 应用安装状态检查 ===")
                 try {
-                    val isInstalled = isAppInstalled(context, context.packageName)
+                    val isInstalled = isAppInstalled(context)
                     diagnostics.appendLine("应用安装状态: ${if (isInstalled) "已安装" else "未安装"}")
                 } catch (e: Exception) {
                     diagnostics.appendLine("应用安装状态检查失败: ${e.message}")
