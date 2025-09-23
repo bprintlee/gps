@@ -98,7 +98,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private var isInDrivingMode = false // 是否处于驾驶模式
     
     // 省电模式配置 - 从SettingsManager动态读取
-    private fun isPowerSaveMode() = SettingsManager.isPowerSaveMode(this)
+    private fun getPowerSaveModeFromSettings() = SettingsManager.isPowerSaveMode(this)
     private fun getGpsUpdateInterval() = SettingsManager.getGpsUpdateInterval(this)
     private var sensorUpdateInterval = SensorManager.SENSOR_DELAY_UI // 默认UI延迟
     private fun getStateCheckInterval() = SettingsManager.getStateCheckInterval(this)
@@ -234,7 +234,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                     android.util.Log.d("GpsTrackingService", "驾驶状态，使用驾驶模式")
                     GpsAccuracyOptimizer.AccuracyMode.DRIVING
                 }
-                isPowerSaveMode() -> {
+                getPowerSaveModeFromSettings() -> {
                     android.util.Log.d("GpsTrackingService", "使用省电模式")
                     GpsAccuracyOptimizer.AccuracyMode.POWER_SAVE
                 }
@@ -297,7 +297,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
         // 根据省电模式和深度静止状态调整传感器更新频率
         val sensorDelay = when {
             isInDeepStationary -> SensorManager.SENSOR_DELAY_NORMAL // 深度静止状态使用正常延迟
-            isPowerSaveMode() -> SensorManager.SENSOR_DELAY_UI // 省电模式使用UI延迟
+            getPowerSaveModeFromSettings() -> SensorManager.SENSOR_DELAY_UI // 省电模式使用UI延迟
             else -> SensorManager.SENSOR_DELAY_NORMAL // 正常模式使用正常延迟
         }
         
@@ -337,7 +337,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     private fun checkPowerSaveMode() {
         // 不再检查系统省电模式，使用应用内省电模式设置
         // 根据省电模式调整参数
-        if (isPowerSaveMode()) {
+        if (getPowerSaveModeFromSettings()) {
             // 省电模式：使用设置中的间隔
             android.util.Log.d("GpsTrackingService", "省电模式已启用")
         } else {
@@ -493,7 +493,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                          android.util.Log.d("GpsTrackingService", "✓ 活跃状态切换到室内 - $reason, 活跃时间: ${timeInActiveState/1000}秒")
                          
                          // 室内状态时降低GPS更新频率
-                         if (!isPowerSaveMode()) {
+                         if (!getPowerSaveModeFromSettings()) {
                              stopLocationUpdates()
                              startLocationUpdates()
                          }
@@ -515,7 +515,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                      android.util.Log.d("GpsTrackingService", "GPS超时切换到室内状态")
                      
                      // 室内状态时降低GPS更新频率
-                     if (!isPowerSaveMode()) {
+                     if (!getPowerSaveModeFromSettings()) {
                          stopLocationUpdates()
                          startLocationUpdates()
                      }
@@ -884,7 +884,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     fun isGpsAvailable(): Boolean = isGpsAvailable
     fun getStepCount(): Int = stepCount
     fun getLastAcceleration(): Float = lastAcceleration
-    fun isPowerSaveMode(): Boolean = isPowerSaveMode()
+    fun isPowerSaveMode(): Boolean = getPowerSaveModeFromSettings()
     fun getLastLocation(): Location? = lastLocation
     
      // 调试信息方法
@@ -1040,7 +1040,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
     // 手动切换省电模式
     fun togglePowerSaveMode() {
         // 切换省电模式设置
-        val currentMode = isPowerSaveMode()
+        val currentMode = getPowerSaveModeFromSettings()
         val newMode = !currentMode
         
         // 保存新设置到SharedPreferences
