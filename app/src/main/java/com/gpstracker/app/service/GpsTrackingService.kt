@@ -412,8 +412,9 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
             // 3. 步数检测（活跃状态）
             stepCount >= stepThreshold -> {
                 currentState = TrackingState.ACTIVE
-                isGpsAvailable = true
+                // 不立即设置isGpsAvailable为true，等待GPS信号确认
                 lastMovementTime = currentTime
+                android.util.Log.d("GpsTrackingService", "步数达到阈值，切换到活跃状态 - 步数: $stepCount")
             }
             
             // 4. GPS超时检查（降低优先级，避免覆盖驾驶模式）
@@ -443,10 +444,17 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                 }
             }
             
-            // 5. GPS可用时切换到室外
+            // 5. GPS可用时切换到室外（需要GPS信号确认）
             isGpsAvailable -> {
-                currentState = TrackingState.OUTDOOR
-                lastMovementTime = currentTime
+                // 只有在活跃状态下且有GPS信号时才切换到室外
+                if (currentState == TrackingState.ACTIVE) {
+                    currentState = TrackingState.OUTDOOR
+                    lastMovementTime = currentTime
+                    android.util.Log.d("GpsTrackingService", "活跃状态下检测到GPS信号，切换到室外状态")
+                } else if (currentState == TrackingState.INDOOR) {
+                    // 室内状态下有GPS信号，保持室内状态但记录GPS可用
+                    android.util.Log.d("GpsTrackingService", "室内状态下检测到GPS信号，保持室内状态")
+                }
             }
             
             // 6. 默认情况
