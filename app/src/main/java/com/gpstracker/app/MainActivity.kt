@@ -135,6 +135,11 @@ class MainActivity : AppCompatActivity() {
             SimpleDebugActivity.start(this)
         }
         
+        binding.testStationaryButton.setOnClickListener {
+            val intent = Intent(this, TestStationaryActivity::class.java)
+            startActivity(intent)
+        }
+        
         // MQTT测试功能和GPS精度检查功能已删除
         
     }

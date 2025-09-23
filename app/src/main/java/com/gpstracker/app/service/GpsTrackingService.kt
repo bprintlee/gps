@@ -438,6 +438,8 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
              currentState == TrackingState.ACTIVE -> {
                  val timeInActiveState = currentTime - activeStateStartTime
                  
+                 android.util.Log.d("GpsTrackingService", "活跃状态检查 - 活跃时间: ${timeInActiveState/1000}秒, 阈值: ${activeStateTimeoutMs/1000}秒")
+                 
                  // 活跃状态下，前5分钟不检测
                  if (timeInActiveState > activeStateTimeoutMs) {
                      val timeSinceLastMovement = currentTime - lastMovementTime
@@ -446,18 +448,29 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                      val distanceToFiveMinutesAgo = if (lastLocation != null) {
                          val locationFiveMinutesAgo = getLocationFiveMinutesAgo()
                          if (locationFiveMinutesAgo != null) {
-                             locationFiveMinutesAgo.distanceTo(lastLocation!!)
+                             val distance = locationFiveMinutesAgo.distanceTo(lastLocation!!)
+                             android.util.Log.d("GpsTrackingService", "5分钟前位置距离计算: ${distance}m")
+                             distance
                          } else {
+                             android.util.Log.w("GpsTrackingService", "无法获取5分钟前位置，使用0距离")
                              0f
                          }
                      } else {
+                         android.util.Log.w("GpsTrackingService", "当前位置为空，无法计算距离")
                          0f
                      }
+                     
+                     // 检查GPS超时条件
+                     val gpsTimeout = (currentTime - lastGpsTime) > gpsTimeoutMs
+                     val gpsTimeSinceLastUpdate = (currentTime - lastGpsTime) / 1000
+                     
+                     android.util.Log.d("GpsTrackingService", "活跃状态切换检查:")
+                     android.util.Log.d("GpsTrackingService", "  距离条件: ${distanceToFiveMinutesAgo}m ≤ ${activeStateDistanceThreshold}m = ${distanceToFiveMinutesAgo <= activeStateDistanceThreshold}")
+                     android.util.Log.d("GpsTrackingService", "  GPS超时: ${gpsTimeSinceLastUpdate}秒 > ${gpsTimeoutMs/1000}秒 = $gpsTimeout")
                      
                      // 满足任一条件就切换到室内状态：
                      // 1. 当前与5分钟前位置距离 ≤ 200米
                      // 2. 或者 45秒内没有GPS信号
-                     val gpsTimeout = (currentTime - lastGpsTime) > gpsTimeoutMs
                      val shouldSwitchToIndoor = (distanceToFiveMinutesAgo <= activeStateDistanceThreshold) || 
                                                gpsTimeout
                      
@@ -469,10 +482,10 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                          val reason = if (distanceToFiveMinutesAgo <= activeStateDistanceThreshold) {
                              "距离条件: ${distanceToFiveMinutesAgo}m ≤ ${activeStateDistanceThreshold}m"
                          } else {
-                             "GPS超时: ${(currentTime - lastGpsTime)/1000}秒 > ${gpsTimeoutMs/1000}秒"
+                             "GPS超时: ${gpsTimeSinceLastUpdate}秒 > ${gpsTimeoutMs/1000}秒"
                          }
                          
-                         android.util.Log.d("GpsTrackingService", "活跃状态切换到室内 - $reason, 活跃时间: ${timeInActiveState/1000}秒")
+                         android.util.Log.d("GpsTrackingService", "✓ 活跃状态切换到室内 - $reason, 活跃时间: ${timeInActiveState/1000}秒")
                          
                          // 室内状态时降低GPS更新频率
                          if (!isPowerSaveMode) {
@@ -480,7 +493,7 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
                              startLocationUpdates()
                          }
                      } else {
-                         android.util.Log.d("GpsTrackingService", "活跃状态保持中 - 距离: ${distanceToFiveMinutesAgo}m, GPS超时: ${(currentTime - lastGpsTime)/1000}秒, 活跃时间: ${timeInActiveState/1000}秒")
+                         android.util.Log.d("GpsTrackingService", "活跃状态保持中 - 距离: ${distanceToFiveMinutesAgo}m, GPS超时: ${gpsTimeSinceLastUpdate}秒, 活跃时间: ${timeInActiveState/1000}秒")
                      }
                  } else {
                      android.util.Log.d("GpsTrackingService", "活跃状态保持中 - 前5分钟不检测, 活跃时间: ${timeInActiveState/1000}秒")
@@ -592,40 +605,49 @@ class GpsTrackingService : Service(), LocationListener, SensorEventListener {
          val currentTime = System.currentTimeMillis()
          val fiveMinutesAgo = currentTime - activeStateTimeoutMs
          
+         android.util.Log.d("GpsTrackingService", "查找5分钟前位置 - 当前时间: $currentTime, 5分钟前: $fiveMinutesAgo")
+         
          // 从位置历史中找到5分钟前或更早的位置
          synchronized(locationHistory) {
+             android.util.Log.d("GpsTrackingService", "位置历史记录大小: ${locationHistory.size}")
+             
              for (i in locationHistory.size - 1 downTo 0) {
                  val (timestamp, location) = locationHistory[i]
+                 val timeDiff = (currentTime - timestamp) / 1000
+                 android.util.Log.d("GpsTrackingService", "检查历史位置[$i]: 时间差=${timeDiff}秒, 位置=${location.latitude},${location.longitude}")
+                 
                  if (timestamp <= fiveMinutesAgo) {
-                     android.util.Log.d("GpsTrackingService", "找到5分钟前位置: 时间差=${(currentTime - timestamp)/1000}秒")
+                     android.util.Log.d("GpsTrackingService", "✓ 找到5分钟前位置: 时间差=${timeDiff}秒, 位置=${location.latitude},${location.longitude}")
                      return location
                  }
              }
          }
          
          // 如果没有找到5分钟前的位置，返回活跃状态开始时的位置
-         android.util.Log.d("GpsTrackingService", "未找到5分钟前位置，使用活跃状态开始位置")
+         android.util.Log.d("GpsTrackingService", "未找到5分钟前位置，使用活跃状态开始位置: ${activeStateStartLocation?.latitude},${activeStateStartLocation?.longitude}")
          return activeStateStartLocation
      }
      
-     /**
-      * 添加位置到历史记录
-      */
-     private fun addLocationToHistory(location: Location) {
-         val currentTime = System.currentTimeMillis()
-         synchronized(locationHistory) {
-             locationHistory.add(Pair(currentTime, location))
-             
-             // 保持历史记录大小在限制范围内
-             if (locationHistory.size > maxHistorySize) {
-                 locationHistory.removeAt(0)
-             }
-             
-             // 清理过期的历史记录（超过10分钟的记录）
-             val tenMinutesAgo = currentTime - 600000L
-             locationHistory.removeAll { it.first < tenMinutesAgo }
-         }
-     }
+    /**
+     * 添加位置到历史记录
+     */
+    private fun addLocationToHistory(location: Location) {
+        val currentTime = System.currentTimeMillis()
+        synchronized(locationHistory) {
+            locationHistory.add(Pair(currentTime, location))
+            
+            // 清理过期的历史记录（超过10分钟的记录）
+            val tenMinutesAgo = currentTime - 600000L
+            locationHistory.removeAll { it.first < tenMinutesAgo }
+            
+            // 保持历史记录大小在限制范围内
+            while (locationHistory.size > maxHistorySize) {
+                locationHistory.removeAt(0)
+            }
+            
+            android.util.Log.d("GpsTrackingService", "位置历史记录已添加，当前大小: ${locationHistory.size}")
+        }
+    }
     
     private fun startNewTrip() {
         if (!isTripActive) {
